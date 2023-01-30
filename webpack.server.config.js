@@ -1,4 +1,5 @@
 ﻿//Webpack Server Config
+//Date: 30.1.23 6:42
 
 //Vars & Consts
 const path = require("path");
