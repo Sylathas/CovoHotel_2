@@ -10,4 +10,10 @@ This first commit stands for the creation of the repo. The character controller,
 
 Most of the code was learned through the Guided Learning tutorial [Create A Game Tutorial Series](https://doc.babylonjs.com/guidedLearning/createAGame) on the Babylon.js docs.
 
+# 0.2 - 30/01/23
+
+This second main commit enable online features such Express & Socket communication. Multiplayer functionalities has to be added in the next commits, giving more complex functions to Covo Hotel 2 Socket.io framework (spawn other players, share position and trasmit actions).
+
+The code was made with an all nighter of offenses to God caused by Webpack of my ass, no tutorial on the internet could help me with that hell.
+
 
