@@ -2,7 +2,7 @@
 import "@babylonjs/inspector";
 import "@babylonjs/loaders/glTF";
 
-import { Engine, Scene, ArcRotateCamera, Vector3, HemisphericLight, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, CubeTexture, Texture } from "@babylonjs/core";
+import { Engine, Scene, ArcRotateCamera, Vector3, HemisphericLight, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, CubeTexture, Texture, PointerEventTypes } from "@babylonjs/core";
 import { AdvancedDynamicTexture, Button, Control } from "@babylonjs/gui";
 import { Environment } from "./environment";
 import { Player } from "./characterController";
@@ -31,6 +31,9 @@ class App {
     private _state: number = 0;
     private _gamescene: Scene;
     private _cutScene: Scene;
+
+    //Camera related
+    private _mouseDown: boolean = false;
 
     constructor() {
         this._canvas = this._createCanvas();
@@ -218,7 +221,7 @@ class App {
         const camera = this._player.activatePlayerCamera();
 
         //Create NPC
-        this._npc = new NPC(this.assets, scene, shadowGenerator, this._canvas);
+        //this._npc = new NPC(this.assets, scene, shadowGenerator, this._canvas);
 
         //set up lantern collision checks
         this._environment.checkLanterns(this._player);
@@ -261,7 +264,7 @@ class App {
         skybox.material = skyboxMaterial;
 
         //--INPUT--
-        this._input = new PlayerInput(scene); //detect keyboard/mobile inputs
+        this._input = new PlayerInput(scene, this._canvas); //detect keyboard/mobile inputs
 
         //primitive character and setting
         await this._initializeGameAsync(scene);
@@ -273,9 +276,29 @@ class App {
         this._scene.dispose();
         this._state = State.GAME;
         this._scene = scene;
+        this._scene.gravity = new Vector3(0, -0.15, 0);
         this._engine.hideLoadingUI();
         //the game is ready, attach control back
         this._scene.attachControl();
+
+        let lastMousePos = this._scene.pointerX;
+
+        this._scene.onPointerObservable.add((pointerInfo) => {
+            switch (pointerInfo.type) {
+                case PointerEventTypes.POINTERDOWN:
+                    this._mouseDown = true;
+                    break;
+                case PointerEventTypes.POINTERUP:
+                    this._mouseDown = false;
+                    break;
+                case PointerEventTypes.POINTERMOVE:
+                    if (this._mouseDown) {
+                        this._scene.cameras[0]._cache.parent.rotation.y += (this._scene.pointerX - lastMousePos) / 100;
+                    }
+                    lastMousePos = this._scene.pointerX;
+                    break;
+            }
+        });
     }
 }
 new App();
