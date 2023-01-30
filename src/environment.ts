@@ -11,8 +11,8 @@ export class Environment {
 
     constructor(scene: Scene) {
         this._scene = scene;
-
         this._lanternObjs = [];
+
         //create emissive material for when lantern is lit
         const lightmtl = new PBRMetallicRoughnessMaterial("lantern mesh light", this._scene);
         lightmtl.emissiveTexture = new Texture("/textures/litLantern.png", this._scene, true, false);
@@ -20,6 +20,9 @@ export class Environment {
         this._lightmtl = lightmtl;
     }
 
+    //What we do once the environment assets have been imported
+    //handles setting the necessary flags for collision and trigger meshes,
+    //sets up the lantern objects
     public async load() {
         const assets = await this._loadAsset();
         //Loop through all environment meshes that were imported
@@ -38,8 +41,9 @@ export class Environment {
             if (m.name.includes("collision")) {
                 m.isVisible = false;
                 m.isPickable = true;
+                m.checkCollisions = true;
             }
-            //trigger meshes
+            //trigger meshes 
             if (m.name.includes("Trigger")) {
                 m.isVisible = false;
                 m.isPickable = false;
@@ -49,7 +53,7 @@ export class Environment {
 
         //--LANTERNS--
         assets.lantern.isVisible = false; //original mesh is not visible
-        //transform node to hold all lanterns
+        //transform node to hold all lanterns 
         const lanternHolder = new TransformNode("lanternHolder", this._scene);
         for (let i = 0; i < 22; i++) {
             //Mesh Cloning
@@ -100,7 +104,6 @@ export class Environment {
                         parameter: lantern.mesh
                     },
                     () => {
-                        console.log("ciao");
                         //if the lantern is not lit, light it up & reset sparkler timer
                         if (!lantern.isLit && player.sparkLit) {
                             player.lanternsLit += 1; //increment the lantern count

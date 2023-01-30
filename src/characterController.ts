@@ -1,4 +1,4 @@
-﻿import { TransformNode, ShadowGenerator, Scene, Mesh, UniversalCamera, ArcRotateCamera, Vector3, Quaternion, Ray, ParticleSystem, ActionManager, ExecuteCodeAction } from "@babylonjs/core";
+﻿import { TransformNode, ShadowGenerator, Scene, Mesh, UniversalCamera, ArcRotateCamera, Vector3, Quaternion, Ray, ParticleSystem, ActionManager, ExecuteCodeAction, Texture, Color4, Color3, SphereParticleEmitter } from "@babylonjs/core";
 
 export class Player extends TransformNode {
     public camera;
@@ -19,6 +19,7 @@ export class Player extends TransformNode {
     private static readonly GRAVITY: number = -2.8;
     private static readonly DASH_FACTOR: number = 2;
     private static readonly DASH_TIME: number = 10; //how many frames the dash lasts
+    private static readonly DOWN_TILT: Vector3 = new Vector3(0.8290313946973066, 0, 0);
     private static readonly ORIGINAL_TILT: Vector3 = new Vector3(0.5934119456780721, 0, 0);
     public dashTime: number = 0;
 
@@ -59,16 +60,15 @@ export class Player extends TransformNode {
         this.mesh = assets.mesh;
         this.mesh.parent = this;
 
+        this.scene.getLightByName("sparklight").parent = this.scene.getTransformNodeByName("Empty");
+
         shadowGenerator.addShadowCaster(assets.mesh); //the player mesh will cast shadows
 
         this._input = input;
 
-        this.scene.getLightByName("sparklight").parent = this.scene.getTransformNodeByName("Empty");
-
         //--COLLISIONS--
         this.mesh.actionManager = new ActionManager(this.scene);
 
-        //World ground detection
         //if player falls through "world", reset the position to the last safe grounded position
         this.mesh.actionManager.registerAction(
             new ExecuteCodeAction({
@@ -80,6 +80,8 @@ export class Player extends TransformNode {
                 }
             )
         );
+
+        this._createSparkles(); //create the sparkler particle system
     }
 
     private _updateFromControls(): void {
@@ -89,6 +91,8 @@ export class Player extends TransformNode {
         this._h = this._input.horizontal; //x-axis
         this._v = this._input.vertical; //z-axis
 
+        //--DASHING--
+        //limit dash to once per ground/platform touch
         if (this._input.dashing && !this._dashPressed && this._canDash) {
             this._canDash = false; //we've started a dash, do not allow another
             this._dashPressed = true; //start the dash sequence
@@ -147,22 +151,28 @@ export class Player extends TransformNode {
         this._camRoot.rotation = Vector3.Lerp(this._camRoot.rotation, new Vector3(this._camRoot.rotation.x, angle, this._camRoot.rotation.z), 2 * this._deltaTime);
     }
 
+    //--GROUND DETECTION--
+    //Send raycast to the floor to detect if there are any hits with meshes below the character
     private _floorRaycast(offsetx: number, offsetz: number, raycastlen: number): Vector3 {
+        //position the raycast from bottom center of mesh 
         let raycastFloorPos = new Vector3(this.mesh.position.x + offsetx, this.mesh.position.y + 0.5, this.mesh.position.z + offsetz);
         let ray = new Ray(raycastFloorPos, Vector3.Up().scale(-1), raycastlen);
 
+        //defined which type of meshes should be pickable 
         let predicate = function (mesh) {
             return mesh.isPickable && mesh.isEnabled();
         }
+
         let pick = this.scene.pickWithRay(ray, predicate);
 
-        if (pick.hit) {
+        if (pick.hit) { //grounded
             return pick.pickedPoint;
-        } else {
+        } else { //not grounded
             return Vector3.Zero();
         }
     }
 
+    //raycast from the center of the player to check for whether player is grounded
     private _isGrounded(): boolean {
         if (this._floorRaycast(0, 0, 0.6).equals(Vector3.Zero())) {
             return false;
@@ -171,6 +181,7 @@ export class Player extends TransformNode {
         }
     }
 
+    //check whether a mesh is sloping based on the normal
     private _checkSlope(): boolean {
 
         //only check meshes that are pickable and enabled (specific for collision meshes that are invisible)
@@ -218,9 +229,13 @@ export class Player extends TransformNode {
     }
 
     private _updateGroundDetection(): void {
+        this._deltaTime = this.scene.getEngine().getDeltaTime() / 1000.0;
+
+        //if not grounded
         if (!this._isGrounded()) {
             //if the body isnt grounded, check if it's on a slope and was either falling or walking onto it
             if (this._checkSlope() && this._gravity.y <= 0) {
+                console.log("slope")
                 //if you are considered on a slope, you're able to jump and gravity wont affect you
                 this._gravity.y = 0;
                 this._jumpCount = 1;
@@ -231,20 +246,24 @@ export class Player extends TransformNode {
                 this._grounded = false;
             }
         }
+
         //limit the speed of gravity to the negative of the jump power
         if (this._gravity.y < -Player.JUMP_FORCE) {
             this._gravity.y = -Player.JUMP_FORCE;
         }
+
+        //update our movement to account for jumping
         this.mesh.moveWithCollisions(this._moveDirection.addInPlace(this._gravity));
 
         if (this._isGrounded()) {
             this._gravity.y = 0;
             this._grounded = true;
+            //keep track of last known ground position
             this._lastGroundPos.copyFrom(this.mesh.position);
 
-            this._jumpCount = 1; //allow for jumping
+            this._jumpCount = 1;
             //dashing reset
-            this._canDash = true; //the ability to dash
+            this._canDash = true;
             //reset sequence(needed if we collide with the ground BEFORE actually completing the dash duration)
             this.dashTime = 0;
             this._dashPressed = false;
@@ -255,7 +274,6 @@ export class Player extends TransformNode {
             this._gravity.y = Player.JUMP_FORCE;
             this._jumpCount--;
         }
-
 
     }
 
@@ -306,5 +324,44 @@ export class Player extends TransformNode {
 
         this.scene.activeCamera = this.camera;
         return this.camera;
+    }
+
+    private _createSparkles(): void {
+
+        const sphere = Mesh.CreateSphere("sparkles", 4, 1, this.scene);
+        sphere.position = new Vector3(0, 0, 0);
+        sphere.parent = this.scene.getTransformNodeByName("Empty"); // place particle system at the tip of the sparkler on the player mesh
+        sphere.isVisible = false;
+
+        let particleSystem = new ParticleSystem("sparkles", 1000, this.scene);
+        particleSystem.particleTexture = new Texture("textures/flwr.png", this.scene);
+        particleSystem.emitter = sphere;
+        particleSystem.particleEmitterType = new SphereParticleEmitter(0);
+
+        particleSystem.updateSpeed = 0.014;
+        particleSystem.minAngularSpeed = 0;
+        particleSystem.maxAngularSpeed = 360;
+        particleSystem.minEmitPower = 1;
+        particleSystem.maxEmitPower = 3;
+
+        particleSystem.minSize = 0.5;
+        particleSystem.maxSize = 2;
+        particleSystem.minScaleX = 0.5;
+        particleSystem.minScaleY = 0.5;
+        particleSystem.color1 = new Color4(0.8, 0.8549019607843137, 1, 1);
+        particleSystem.color2 = new Color4(0.8509803921568627, 0.7647058823529411, 1, 1);
+
+        particleSystem.addRampGradient(0, Color3.White());
+        particleSystem.addRampGradient(1, Color3.Black());
+        particleSystem.getRampGradients()[0].color = Color3.FromHexString("#BBC1FF");
+        particleSystem.getRampGradients()[1].color = Color3.FromHexString("#FFFFFF");
+        particleSystem.maxAngularSpeed = 0;
+        particleSystem.maxInitialRotation = 360;
+        particleSystem.minAngularSpeed = -10;
+        particleSystem.maxAngularSpeed = 10;
+
+        particleSystem.start();
+
+        this.sparkler = particleSystem;
     }
 }
