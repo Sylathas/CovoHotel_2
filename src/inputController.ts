@@ -27,8 +27,7 @@ export class PlayerInput {
         this._canvas = canvas;
 
         //joystick controller
-        this.joystickPos = new Joysticks(this._canvas);
-
+        this.joystickPos = new Joysticks(this._canvas, scene);
 
         this.inputMap = {};
         scene.actionManager.registerAction(new ExecuteCodeAction(ActionManager.OnKeyDownTrigger, (evt) => {
@@ -41,16 +40,31 @@ export class PlayerInput {
         //add to the scene an observable that calls updateFromKeyboard before rendering
         scene.onBeforeRenderObservable.add(() => {
             this._updateFromKeyboard(scene);
+            this._updateFromController(scene);
         });
+    }
+
+    private _updateFromController(scene): void {
+        if ( this.joystickPos._posY < -10) {
+            this.vertical = Scalar.Lerp(this.vertical, 1, 0.2);
+        } else if (this.joystickPos._posY > 10) {
+            this.vertical = Scalar.Lerp(this.vertical, -1, 0.2);
+            this._rotateCamera(scene);
+        }
+
+        if (this.joystickPos._posX < -20) {
+            this.horizontalAxis = -1;
+            this._rotateCamera(scene);
+        } else if (this.joystickPos._posX > 20) {
+            this.horizontalAxis = 1;
+            this._rotateCamera(scene);
+        }
     }
 
     private _updateFromKeyboard(scene): void {
         if (this.inputMap["ArrowUp"] || this.inputMap["w"] || this.inputMap["W"]) {
             this.vertical = Scalar.Lerp(this.vertical, 1, 0.2);
-            if (scene.cameras[0]._cache.parent.rotation.y != 0) {
-                this._rotateCamera(scene);
-            }
-            
+            this._rotateCamera(scene);
         } else if (this.inputMap["ArrowDown"] || this.inputMap["s"] || this.inputMap["S"]) {
             this.vertical = Scalar.Lerp(this.vertical, -1, 0.2);
             this._rotateCamera(scene);

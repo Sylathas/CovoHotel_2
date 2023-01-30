@@ -323,7 +323,7 @@ export class Player extends TransformNode {
         this.camera.lowerAlphaLimit = Math.PI * 1.5;
         this.camera.upperAlphaLimit = Math.PI * 1.5;
 
-        //Apply Collisions
+        //Apply Collisions -- NON WORKING --
         this.camera.applyGravity = true;
         this.camera.ellipsoid = new Vector3(1, 1, 1);
         this.camera.checkCollisions = true;

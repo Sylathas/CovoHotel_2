@@ -223,15 +223,10 @@ class App {
         //Create NPC
         //this._npc = new NPC(this.assets, scene, shadowGenerator, this._canvas);
 
-        //set up lantern collision checks
-        this._environment.checkLanterns(this._player);
 
         //glow layer
         const gl = new GlowLayer("glow", scene);
         gl.intensity = 0.4;
-        this._environment._lanternObjs.forEach(lantern => {
-            gl.addIncludedOnlyMesh(lantern.mesh);
-        });
         //webpack served from public
     }
 

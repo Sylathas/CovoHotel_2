@@ -3,44 +3,66 @@ import { AdvancedDynamicTexture, Button, Control, Ellipse } from "@babylonjs/gui
 
 export class Joysticks {
 
-    private _posController: Vector4 = Vector4.Zero();
     public _canvas: HTMLCanvasElement;
+    public _posX;
+    public _posY;
+    //Control to see in which axis is the controller in
+    private _posController: Vector4 = Vector4.Zero();
 
-    constructor(canvas: HTMLCanvasElement) {
+    constructor(canvas: HTMLCanvasElement, scene) {
+        this._canvas = canvas;
+        this._posX = 0;
+        this._posY = 0;
+
+        let game = this;
+
+        //Create UI element as body of controller
         let adt = AdvancedDynamicTexture.CreateFullscreenUI("UI");
         let bottomJoystickOffset = -50;
-        let translateTransform;
 
-        this._canvas = canvas;
-
+        //Define the Movement Controller
         let leftThumbContainer = this.makeThumbArea("leftThumb", 2, "blue", null);
         leftThumbContainer.height = "200px";
         leftThumbContainer.width = "200px";
         leftThumbContainer.isPointerBlocker = true;
         leftThumbContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
         leftThumbContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-        leftThumbContainer.alpha = 1;
+        leftThumbContainer.alpha = 0.4;
         leftThumbContainer.top = bottomJoystickOffset;
 
-        let leftInnerThumbContainer = this.makeThumbArea("leftInnterThumb", 4, "blue", null);
-        leftInnerThumbContainer.height = "80px";
-        leftInnerThumbContainer.width = "80px";
-        leftInnerThumbContainer.isPointerBlocker = true;
-        leftInnerThumbContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-        leftInnerThumbContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-
-
+        //Define the Movement Controller's puck
         let leftPuck = this.makeThumbArea("leftPuck", 0, "blue", "blue");
         leftPuck.height = "60px";
         leftPuck.width = "60px";
         leftPuck.isPointerBlocker = true;
+        leftPuck.isHitTestVisible = false;
         leftPuck.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
         leftPuck.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
 
+        leftThumbContainer.onPointerDownObservable.add(function (coordinates) {
+            leftPuck.isVisible = true;
+            leftThumbContainer.alpha = 1;
+        });
+
+        leftThumbContainer.onPointerUpObservable.add(function (coordinates) {
+            leftPuck.isVisible = false;
+            leftThumbContainer.alpha = 0.4;
+            game._posX = 0;
+            game._posY = 0;
+        });
+
+        leftThumbContainer.onPointerMoveObservable.add(function (coordinates) {
+            if (leftPuck.isVisible) {
+                game._posX = scene.pointerX - canvas.width / 2;
+                game._posY = scene.pointerY - canvas.height + 150;
+                leftPuck.left = game._posX;
+                leftPuck.top = game._posY;
+            }
+        });
+
         adt.addControl(leftThumbContainer);
-        leftThumbContainer.addControl(leftInnerThumbContainer);
         leftThumbContainer.addControl(leftPuck);
-        leftPuck.isVisible = true;
+        leftPuck.isVisible = false;
     }
 
     private makeThumbArea(name, thickness, color, background) {
