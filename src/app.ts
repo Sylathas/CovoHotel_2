@@ -2,7 +2,7 @@
 import "@babylonjs/inspector";
 import "@babylonjs/loaders/glTF";
 
-import { Engine, Scene, ArcRotateCamera, Vector3, HemisphericLight, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, CubeTexture } from "@babylonjs/core";
+import { Engine, Scene, ArcRotateCamera, Vector3, HemisphericLight, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, CubeTexture, Texture } from "@babylonjs/core";
 import { AdvancedDynamicTexture, Button, Control } from "@babylonjs/gui";
 import { Environment } from "./environment";
 import { Player } from "./characterController";
@@ -21,7 +21,8 @@ class App {
     private _input: PlayerInput;
     private _environment;
     private _player: Player;
-
+    private _environmentTexture: string = "textures/envtext.env"; //environment texture for HDRI and skybox
+    private _playerModel: string = "player.glb"; //mesh of the player
 
     //Scene - related
     private _state: number = 0;
@@ -155,12 +156,12 @@ class App {
         const environment = new Environment(scene);
         this._environment = environment;
         await this._environment.load(); //environment
-        await this._loadCharacterAssets(scene);
+        await this._loadCharacterAssets(scene, this._playerModel);
     }
 
-    private async _loadCharacterAssets(scene) {
+    private async _loadCharacterAssets(scene, playerModel) {
 
-        async function loadCharacter() {
+        async function loadCharacter(playerModel) {
             //collision mesh
             const outer = MeshBuilder.CreateBox("outer", { width: 2, depth: 1, height: 3 }, scene);
             outer.isVisible = false;
@@ -176,7 +177,7 @@ class App {
 
             outer.rotationQuaternion = new Quaternion(0, 1, 0, 0); // rotate the player mesh 180 since we want to see the back of the player
 
-            return SceneLoader.ImportMeshAsync(null, "./models/", "player.glb", scene).then((result) => {
+            return SceneLoader.ImportMeshAsync(null, "./models/", playerModel, scene).then((result) => {
                 const root = result.meshes[0];
                 //body is our actual player mesh
                 const body = root;
@@ -191,7 +192,7 @@ class App {
                 }
             });
         }
-        return loadCharacter().then(assets => {
+        return loadCharacter(playerModel).then(assets => {
             this.assets = assets;
         })
 
@@ -237,11 +238,21 @@ class App {
         scene.detachControl();
 
         //IBL (image based lighting) - to give scene an ambient light
-        const envHdri = CubeTexture.CreateFromPrefilteredData("textures/envtext.env", scene);
+        const envHdri = CubeTexture.CreateFromPrefilteredData(this._environmentTexture, scene);
         envHdri.name = "env";
         envHdri.gammaSpace = false;
         scene.environmentTexture = envHdri;
         scene.environmentIntensity = 0.04;
+
+        //Create skybox
+        const skybox = MeshBuilder.CreateBox("skyBox", { size: 1000.0 }, scene);
+        const skyboxMaterial = new StandardMaterial("skyBox", scene);
+        skyboxMaterial.backFaceCulling = false;
+        skyboxMaterial.reflectionTexture = CubeTexture.CreateFromPrefilteredData(this._environmentTexture, scene);
+        skyboxMaterial.reflectionTexture.coordinatesMode = Texture.SKYBOX_MODE;
+        skyboxMaterial.diffuseColor = new Color3(0, 0, 0);
+        skyboxMaterial.specularColor = new Color3(0, 0, 0);
+        skybox.material = skyboxMaterial;
 
         //--INPUT--
         this._input = new PlayerInput(scene); //detect keyboard/mobile inputs

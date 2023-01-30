@@ -7,7 +7,8 @@ export class Environment {
 
     //Meshes
     private _lanternObjs: Array<Lantern>; //array of lanterns that need to be lit
-    private _lightmtl: PBRMetallicRoughnessMaterial; // emissive texture for when lanter
+    private _lightmtl: PBRMetallicRoughnessMaterial; // emissive texture for when lanter 
+    public environmentModel: string = "envSetting.glb"; //mesh of the map
 
     constructor(scene: Scene) {
         this._scene = scene;
@@ -71,7 +72,7 @@ export class Environment {
 
     private async _loadAsset() {
         //load environment mesh
-        const result = await SceneLoader.ImportMeshAsync(null, "./models/", "envSetting.glb", this._scene);
+        const result = await SceneLoader.ImportMeshAsync(null, "./models/", this.environmentModel, this._scene);
 
         let env = result.meshes[0];
         let allMeshes = env.getChildMeshes();
