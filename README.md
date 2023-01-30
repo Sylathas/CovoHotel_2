@@ -10,4 +10,4 @@ This first commit stands for the creation of the repo. The character controller,
 
 Most of the code was learned through the Guided Learning tutorial [Create A Game Tutorial Series](https://doc.babylonjs.com/guidedLearning/createAGame) on the Babylon.js docs.
 
-PROVA COMMIT
+

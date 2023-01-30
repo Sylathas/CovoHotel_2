@@ -10,6 +10,7 @@ import { PlayerInput } from "./inputController";
 enum State { START = 0, GAME = 1, LOSE = 2, CUTSCENE = 3 }
 
 class App {
+    
     // General Entire Application
     private _scene: Scene;
     private _canvas: HTMLCanvasElement;
@@ -20,7 +21,6 @@ class App {
     private _input: PlayerInput;
     private _environment;
     private _player: Player;
-
 
     //Scene - related
     private _state: number = 0;
