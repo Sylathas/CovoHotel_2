@@ -7,6 +7,7 @@ import { AdvancedDynamicTexture, Button, Control } from "@babylonjs/gui";
 import { Environment } from "./environment";
 import { Player } from "./characterController";
 import { PlayerInput } from "./inputController";
+import { NPC } from "./NPC";
 
 enum State { START = 0, GAME = 1, LOSE = 2, CUTSCENE = 3 }
 
@@ -22,6 +23,7 @@ class App {
     private _input: PlayerInput;
     private _environment;
     private _player: Player;
+    private _npc: NPC;
     private _environmentTexture: string = "textures/envtext.env"; //environment texture for HDRI and skybox
     private _playerModel: string = "player.glb"; //mesh of the player
 
@@ -214,6 +216,9 @@ class App {
         //Create the player
         this._player = new Player(this.assets, scene, shadowGenerator, this._canvas, this._input);
         const camera = this._player.activatePlayerCamera();
+
+        //Create NPC
+        this._npc = new NPC(this.assets, scene, shadowGenerator, this._canvas);
 
         //set up lantern collision checks
         this._environment.checkLanterns(this._player);
