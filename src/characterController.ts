@@ -314,13 +314,28 @@ export class Player extends TransformNode {
         //our actual camera that's pointing at our root's position
         this.camera = new ArcRotateCamera("cam", Math.PI * 1.5, Math.PI / 2, 20, this._camRoot.position, this.scene);
         this.camera.attachControl(this._canvas, true);
+
+        //Set camera limits
         this.camera.lowerRadiusLimit = 0;
         this.camera.upperRadiusLimit = 100;
         this.camera.lowerBetaLimit = Math.PI / 4;
         this.camera.upperBetaLimit = Math.PI / 1.5;
-        this.camera.inputs.remove(this.camera.inputs.attached.keyboard);
-        this.camera.fov = 0.8;
-        this.camera.parent = yTilt;
+        this.camera.lowerAlphaLimit = Math.PI * 1.5;
+        this.camera.upperAlphaLimit = Math.PI * 1.5;
+
+        //Apply Collisions -- NON WORKING --
+        this.camera.applyGravity = true;
+        this.camera.ellipsoid = new Vector3(1, 1, 1);
+        this.camera.checkCollisions = true;
+
+        //Effect on collide
+        this.camera.onCollide = function (collidedMesh) {
+            console.log(collidedMesh);
+        }
+        
+        this.camera.inputs.remove(this.camera.inputs.attached.keyboard); //Remove keyboard controls 
+        this.camera.fov = 0.8; //Change fov 
+        this.camera.parent = yTilt; //Parent to yTilt
 
         this.scene.activeCamera = this.camera;
         return this.camera;

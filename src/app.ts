@@ -2,11 +2,12 @@
 import "@babylonjs/inspector";
 import "@babylonjs/loaders/glTF";
 
-import { Engine, Scene, ArcRotateCamera, Vector3, HemisphericLight, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, CubeTexture, Texture } from "@babylonjs/core";
+import { Engine, Scene, ArcRotateCamera, Vector3, HemisphericLight, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, CubeTexture, Texture, PointerEventTypes } from "@babylonjs/core";
 import { AdvancedDynamicTexture, Button, Control } from "@babylonjs/gui";
 import { Environment } from "./environment";
 import { Player } from "./characterController";
 import { PlayerInput } from "./inputController";
+import { NPC } from "./NPC";
 import { io, Socket } from "socket.io-client";
 
 enum State { START = 0, GAME = 1, LOSE = 2, CUTSCENE = 3 }
@@ -22,6 +23,7 @@ class App {
     private _input: PlayerInput;
     private _environment;
     private _player: Player;
+    private _npc: NPC;
     private _environmentTexture: string = "textures/envtext.env"; //environment texture for HDRI and skybox
     private _playerModel: string = "player.glb"; //mesh of the player
 
@@ -29,6 +31,9 @@ class App {
     private _state: number = 0;
     private _gamescene: Scene;
     private _cutScene: Scene;
+
+    //Camera related
+    private _mouseDown: boolean = false;
 
     constructor() {
         this._canvas = this._createCanvas();
@@ -215,15 +220,13 @@ class App {
         this._player = new Player(this.assets, scene, shadowGenerator, this._canvas, this._input);
         const camera = this._player.activatePlayerCamera();
 
-        //set up lantern collision checks
-        this._environment.checkLanterns(this._player);
+        //Create NPC
+        //this._npc = new NPC(this.assets, scene, shadowGenerator, this._canvas);
+
 
         //glow layer
         const gl = new GlowLayer("glow", scene);
         gl.intensity = 0.4;
-        this._environment._lanternObjs.forEach(lantern => {
-            gl.addIncludedOnlyMesh(lantern.mesh);
-        });
         //webpack served from public
     }
 
@@ -256,7 +259,7 @@ class App {
         skybox.material = skyboxMaterial;
 
         //--INPUT--
-        this._input = new PlayerInput(scene); //detect keyboard/mobile inputs
+        this._input = new PlayerInput(scene, this._canvas); //detect keyboard/mobile inputs
 
         //primitive character and setting
         await this._initializeGameAsync(scene);
@@ -268,9 +271,29 @@ class App {
         this._scene.dispose();
         this._state = State.GAME;
         this._scene = scene;
+        this._scene.gravity = new Vector3(0, -0.15, 0);
         this._engine.hideLoadingUI();
         //the game is ready, attach control back
         this._scene.attachControl();
+
+        let lastMousePos = this._scene.pointerX;
+
+        this._scene.onPointerObservable.add((pointerInfo) => {
+            switch (pointerInfo.type) {
+                case PointerEventTypes.POINTERDOWN:
+                    this._mouseDown = true;
+                    break;
+                case PointerEventTypes.POINTERUP:
+                    this._mouseDown = false;
+                    break;
+                case PointerEventTypes.POINTERMOVE:
+                    if (this._mouseDown) {
+                        this._scene.cameras[0]._cache.parent.rotation.y += (this._scene.pointerX - lastMousePos) / 100;
+                    }
+                    lastMousePos = this._scene.pointerX;
+                    break;
+            }
+        });
     }
 
     // Multiplayer
