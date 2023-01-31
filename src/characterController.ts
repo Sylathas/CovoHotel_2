@@ -288,7 +288,7 @@ export class Player extends TransformNode {
             this._beforeRenderUpdate();
             this._updateCamera();
 
-        })
+        });
         return this.camera;
     }
 

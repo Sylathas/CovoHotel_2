@@ -2,12 +2,13 @@
 import "@babylonjs/inspector";
 import "@babylonjs/loaders/glTF";
 
-import { Engine, Scene, ArcRotateCamera, Vector3, HemisphericLight, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, CubeTexture, Texture, PointerEventTypes } from "@babylonjs/core";
-import { AdvancedDynamicTexture, Button, Control } from "@babylonjs/gui";
+import { Engine, Scene, Vector3, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, CubeTexture, Texture, PointerEventTypes, Ray, Animation, PickingInfo } from "@babylonjs/core";
+import { AdvancedDynamicTexture, Button, Control, Image, Container } from "@babylonjs/gui";
 import { Environment } from "./environment";
 import { Player } from "./characterController";
 import { PlayerInput } from "./inputController";
 import { NPC } from "./NPC";
+import { uiElement } from "./uiElement";
 import { io, Socket } from "socket.io-client";
 
 enum State { START = 0, GAME = 1, LOSE = 2, CUTSCENE = 3 }
@@ -35,6 +36,10 @@ class App {
     //Camera related
     private _mouseDown: boolean = false;
 
+    //Camera Raycasting
+    private _hits: PickingInfo[] = [];
+    private _fadeAnimation: Animation;
+
     constructor() {
         this._canvas = this._createCanvas();
 
@@ -53,6 +58,23 @@ class App {
                 }
             }
         });
+
+        //Construct animations
+        this._fadeAnimation = new Animation("fade", "visibility", 30, Animation.ANIMATIONTYPE_FLOAT);
+
+        //Create keyframes
+        const keyFrames = []; 
+        keyFrames.push({
+            frame: 0,
+            value: 1
+        });
+
+        keyFrames.push({
+            frame: 30,
+            value: 0.1
+        });
+
+        this._fadeAnimation.setKeys(keyFrames);
 
         // run the main render loop 
         this._main();
@@ -238,6 +260,57 @@ class App {
 
         //--GUI--
         const playerUI = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+
+        //Create first menu container
+        var menu1 = new Container('menu1');
+        menu1.width = "500px";
+        menu1.height = "250px";
+        menu1.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+        menu1.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+        playerUI.addControl(menu1);
+
+        //Create first menu UI
+        var image = uiElement("menu1img", "/textures/UI/Menu1.png", 1, 1, false);
+        menu1.addControl(image);
+
+        //Create first button
+        var bot1 = uiElement("bot1", "/textures/UI/Bot1.png", '100px', "120px", true, "20px", "20px", Control.VERTICAL_ALIGNMENT_BOTTOM, Control.HORIZONTAL_ALIGNMENT_LEFT);
+        menu1.addControl(bot1);
+
+        //Create second button
+        var bot2 = uiElement("bot2", "/textures/UI/Bot1.png", '60px', "80px", true, "140px", "20px", Control.VERTICAL_ALIGNMENT_BOTTOM, Control.HORIZONTAL_ALIGNMENT_LEFT);
+        menu1.addControl(bot2);
+
+        //Create third button
+        var bot3 = uiElement("bot3", "/textures/UI/Bot1.png", '60px', "80px", true, "230px", "20px", Control.VERTICAL_ALIGNMENT_BOTTOM, Control.HORIZONTAL_ALIGNMENT_LEFT);
+        menu1.addControl(bot3);
+
+        //Create second menu container
+        var menu2 = new Container('menu2');
+        menu2.width = "350px";
+        menu2.height = "125px";
+        menu2.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+        menu2.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+        playerUI.addControl(menu2);
+
+        //Create second menu UI
+        var image2 = uiElement("menu2img", "/textures/UI/Menu2.png", 1, 1, false);
+        menu2.addControl(image2);
+
+        //check if device is mobile or desktop, and change UI accordingly
+        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+            menu1.rotation = Math.PI;
+            menu1.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+            menu1.width = 1;
+            //menu1.height = menu1.width * .6;
+
+            menu2.width = 1;
+            //menu2.height = menu2.width * 0.25;
+            image2.source = "/textures/UI/Menu2mobile.png";
+            console.log(menu2);
+            console.log(image2);
+        }
+
         //dont detect any inputs from this ui while the game is loading
         scene.detachControl();
 
@@ -276,6 +349,10 @@ class App {
         //the game is ready, attach control back
         this._scene.attachControl();
 
+        this._scene.meshes.forEach(mesh => {
+            mesh.animations.push(this._fadeAnimation);
+        });
+
         let lastMousePos = this._scene.pointerX;
 
         this._scene.onPointerObservable.add((pointerInfo) => {
@@ -294,8 +371,44 @@ class App {
                     break;
             }
         });
+
+        this._scene.registerBeforeRender(() => {
+            this._checkFrontCamera();
+        });
     }
 
+    //Check if something is between the camera and the player
+    private _checkFrontCamera() {
+
+        //Create Raycast from camera to player
+        let ray = Ray.CreateNewFromTo(
+            this._scene.cameras[0].globalPosition,
+            new Vector3(this._scene.getMeshByName('outer').position.x, this._scene.getMeshByName('outer').position.y + 0.5, this._scene.getMeshByName('outer').position.z)
+        );
+        
+        //Check what meshes are hit by the ray
+        const hits = this._scene.multiPickWithRay(ray);
+        
+        //If ray hits, start animation of disappearing
+        if (hits){
+            for (var i=0; i < hits.length; i++){
+                this._scene.beginAnimation(hits[i].pickedMesh, 30, 0);
+            }
+         }
+
+         //Make meshes hit before now appear
+         this._hits.forEach(mesh => {
+            hits.forEach(element => {
+                if(mesh.pickedMesh.name == element.pickedMesh.name){
+                    return
+                }
+                this._scene.beginAnimation(mesh, 0, 30);
+            });
+        });
+
+        //Set meshes hit as a global variable to check next frame
+        this._hits = hits;
+    }
     // Multiplayer
 }
 new App();
