@@ -33,6 +33,7 @@ server.listen(PORT, () => {
 // Socket Connected
 io.on("connection", (socket) => {
     console.log("User Connected");
+    socket.broadcast.emit('newPlayer');
     // User Disconnect
     socket.on('disconnect', () => {
       console.log('User Disconnected');

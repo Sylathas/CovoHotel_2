@@ -7,12 +7,12 @@ import { AdvancedDynamicTexture, Button, Control } from "@babylonjs/gui";
 import { Environment } from "./environment";
 import { Player } from "./characterController";
 import { PlayerInput } from "./inputController";
+import { io, Socket } from "socket.io-client";
 
 enum State { START = 0, GAME = 1, LOSE = 2, CUTSCENE = 3 }
 
 class App {
-    
-    // General Entire Application
+    //General Entire Application
     private _scene: Scene;
     private _canvas: HTMLCanvasElement;
     private _engine: Engine;
@@ -272,5 +272,7 @@ class App {
         //the game is ready, attach control back
         this._scene.attachControl();
     }
+
+    // Multiplayer
 }
 new App();
