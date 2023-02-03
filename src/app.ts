@@ -8,6 +8,7 @@ import { Environment } from "./environment";
 import { Player } from "./characterController";
 import { PlayerInput } from "./inputController";
 import { NPC } from "./NPC";
+import { MultiplayerFramework } from "./multiplayer"
 import { uiElement } from "./uiElement";
 import { io, Socket } from "socket.io-client";
 
@@ -409,6 +410,8 @@ class App {
         //Set meshes hit as a global variable to check next frame
         this._hits = hits;
     }
+
     // Multiplayer
+    multiplayerFramework = new MultiplayerFramework();
 }
 new App();
