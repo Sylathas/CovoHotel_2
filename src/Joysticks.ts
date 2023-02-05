@@ -18,12 +18,12 @@ export class Joysticks {
 
         //Create UI element as body of controller
         let adt = AdvancedDynamicTexture.CreateFullscreenUI("UI");
-        let bottomJoystickOffset = -50;
+        let bottomJoystickOffset = -150;
 
         //Define the Movement Controller
         let leftThumbContainer = this.makeThumbArea("leftThumb", 2, "blue", null);
-        leftThumbContainer.height = "200px";
-        leftThumbContainer.width = "200px";
+        leftThumbContainer.height = "500px";
+        leftThumbContainer.width = "500px";
         leftThumbContainer.isPointerBlocker = true;
         leftThumbContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
         leftThumbContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
@@ -32,8 +32,8 @@ export class Joysticks {
 
         //Define the Movement Controller's puck
         let leftPuck = this.makeThumbArea("leftPuck", 0, "blue", "blue");
-        leftPuck.height = "60px";
-        leftPuck.width = "60px";
+        leftPuck.height = "100px";
+        leftPuck.width = "100px";
         leftPuck.isPointerBlocker = true;
         leftPuck.isHitTestVisible = false;
         leftPuck.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
@@ -54,7 +54,7 @@ export class Joysticks {
         leftThumbContainer.onPointerMoveObservable.add(function (coordinates) {
             if (leftPuck.isVisible) {
                 game._posX = scene.pointerX - canvas.width / 2;
-                game._posY = scene.pointerY - canvas.height + 150;
+                game._posY = scene.pointerY - canvas.height + 450;
                 leftPuck.left = game._posX;
                 leftPuck.top = game._posY;
             }

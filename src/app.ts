@@ -21,12 +21,14 @@ class App {
 
     //Game State Related
     public assets;
+    public npcAssets = [];
     private _input: PlayerInput;
     private _environment;
     private _player: Player;
     private _npc: NPC;
     private _environmentTexture: string = "textures/envtext.env"; //environment texture for HDRI and skybox
     private _playerModel: string = "player.glb"; //mesh of the player
+    private _npcModels: string[] = ['player.glb'];
 
     //Scene - related
     private _state: number = 0;
@@ -185,6 +187,7 @@ class App {
         this._environment = environment;
         await this._environment.load(); //environment
         await this._loadCharacterAssets(scene, this._playerModel);
+        await this._loadNpcAssets(scene, this._npcModels);
     }
 
     private async _loadCharacterAssets(scene, playerModel) {
@@ -226,6 +229,31 @@ class App {
 
     }
 
+    private async _loadNpcAssets(scene, npcModels) {
+        //click event mesh
+        const outer = MeshBuilder.CreateBox("outer", { width: 2, depth: 1, height: 3 }, scene);
+        outer.isVisible = false;
+        outer.isPickable = true;
+
+        //move origin of box collider to the bottom of the mesh (to match player mesh)
+        outer.bakeTransformIntoVertices(Matrix.Translation(0, 1.5, 0))//collision mesh
+ 
+        npcModels.forEach(model => {
+            return SceneLoader.ImportMeshAsync(null, "./models/", model, scene).then((result) => {
+                const root = result.meshes[0];
+                //body is our actual NPC mesh
+                const body = root;
+                body.parent = outer;
+                body.isPickable = false; //the click trigger is the outer mesh, not the player
+                body.getChildMeshes().forEach(m => {
+                    m.isPickable = false;
+                })
+
+                this.npcAssets.push(outer);
+            });
+        });
+    }
+
     private async _initializeGameAsync(scene): Promise<void> {
         scene.ambientColor = new Color3(0.34509803921568627, 0.5568627450980392, 0.8352941176470589);
         scene.clearColor = new Color4(0.01568627450980392, 0.01568627450980392, 0.20392156862745098);
@@ -243,7 +271,7 @@ class App {
         const camera = this._player.activatePlayerCamera();
 
         //Create NPC
-        //this._npc = new NPC(this.assets, scene, shadowGenerator, this._canvas);
+        this._npc = new NPC(this.npcAssets, scene, shadowGenerator, this._canvas, "mamma", new Vector3(0,30,20), 0);
 
 
         //glow layer

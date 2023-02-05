@@ -26,8 +26,10 @@ export class PlayerInput {
 
         this._canvas = canvas;
 
-        //joystick controller
-        this.joystickPos = new Joysticks(this._canvas, scene);
+        //joystick controller on mobile
+        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+            this.joystickPos = new Joysticks(this._canvas, scene);
+        }
 
         this.inputMap = {};
         scene.actionManager.registerAction(new ExecuteCodeAction(ActionManager.OnKeyDownTrigger, (evt) => {
@@ -37,27 +39,38 @@ export class PlayerInput {
             this.inputMap[evt.sourceEvent.key] = evt.sourceEvent.type == "keydown";
         }));
 
-        //add to the scene an observable that calls updateFromKeyboard before rendering
+        //add to the scene an observable that calls updateFromKeyboard or updateFromController and update before rendering
         scene.onBeforeRenderObservable.add(() => {
-            this._updateFromKeyboard(scene);
-            this._updateFromController(scene);
+            if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                this._updateFromController(scene);
+
+            } else {
+                this._updateFromKeyboard(scene);
+            }
         });
     }
 
     private _updateFromController(scene): void {
-        if ( this.joystickPos._posY < -10) {
-            this.vertical = Scalar.Lerp(this.vertical, 1, 0.2);
-        } else if (this.joystickPos._posY > 10) {
-            this.vertical = Scalar.Lerp(this.vertical, -1, 0.2);
+        if ( this.joystickPos._posY < -50) {
+            this.vertical = Scalar.Lerp(this.vertical, 1, 0.5);
             this._rotateCamera(scene);
+        } else if (this.joystickPos._posY > 50) {
+            this.vertical = Scalar.Lerp(this.vertical, -1, 0.5);
+            this._rotateCamera(scene);
+        } else {
+            this.vertical = 0;
+            this.verticalAxis = 0;
         }
 
-        if (this.joystickPos._posX < -20) {
+        if (this.joystickPos._posX < -50) {
             this.horizontalAxis = -1;
             this._rotateCamera(scene);
-        } else if (this.joystickPos._posX > 20) {
+        } else if (this.joystickPos._posX > 50) {
             this.horizontalAxis = 1;
             this._rotateCamera(scene);
+        } else {
+            this.horizontal = 0;
+            this.horizontalAxis = 0;
         }
     }
 

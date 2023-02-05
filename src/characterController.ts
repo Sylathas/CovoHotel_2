@@ -15,8 +15,8 @@ export class Player extends TransformNode {
 
     //const values
     private static readonly PLAYER_SPEED: number = 0.45;
-    private static readonly JUMP_FORCE: number = 0.80;
-    private static readonly GRAVITY: number = -2.8;
+    private static readonly JUMP_FORCE: number = 0.45;
+    private static readonly GRAVITY: number = -1.8;
     private static readonly DASH_FACTOR: number = 2;
     private static readonly DASH_TIME: number = 10; //how many frames the dash lasts
     private static readonly DOWN_TILT: Vector3 = new Vector3(0.8290313946973066, 0, 0);
@@ -248,8 +248,8 @@ export class Player extends TransformNode {
         }
 
         //limit the speed of gravity to the negative of the jump power
-        if (this._gravity.y < -Player.JUMP_FORCE) {
-            this._gravity.y = -Player.JUMP_FORCE;
+        if (this._gravity.y < -Player.JUMP_FORCE * 2) {
+            this._gravity.y = -Player.JUMP_FORCE * 2;
         }
 
         //update our movement to account for jumping
