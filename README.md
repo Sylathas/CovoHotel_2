@@ -16,4 +16,11 @@ This second main commit enable online features such Express & Socket communicati
 
 The code was made with an all nighter of offenses to God caused by Webpack of my ass, no tutorial on the internet could help me with that hell.
 
+# 0.3 - 07/02/23
+
+Socket is implemented correctly and 100% working. Starting to work to the real multiplayer experience, managing other players position and actions in real-time.
+
+NPCs present a bug where only one NPC can be put on the scene.
+
+
 
