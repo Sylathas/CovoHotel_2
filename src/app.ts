@@ -43,6 +43,10 @@ class App {
     private _hits: PickingInfo[] = [];
     private _fadeAnimation: Animation;
 
+     // Multiplayer
+     multiplayerFramework = new MultiplayerFramework();
+     socket = this.multiplayerFramework.socket;
+
     constructor() {
         this._canvas = this._createCanvas();
 
@@ -273,6 +277,10 @@ class App {
 
         //Create NPC
         this._npc = new NPC(this.npcAssets, scene, shadowGenerator, this._canvas, "mamma", new Vector3(0,30,20), 0);
+        this._npc = new NPC(this.npcAssets, scene, shadowGenerator, this._canvas, "mamma", new Vector3(0,40,20), 0);
+        this.socket.on('newPlayer', (arg) => {
+            new NPC(this.npcAssets, scene, shadowGenerator, this._canvas, this.socket.id, new Vector3(0,30,10), 0)
+        });
 
 
         //glow layer
@@ -438,8 +446,5 @@ class App {
         //Set meshes hit as a global variable to check next frame
         this._hits = hits;
     }
-
-    // Multiplayer
-    multiplayerFramework = new MultiplayerFramework();
 }
 new App();

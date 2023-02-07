@@ -1,7 +1,7 @@
 import { io, Socket } from "socket.io-client";
 
 export class MultiplayerFramework {
-    private socket: Socket
+    public socket: Socket
 
     constructor() {
         this.socket = io()
@@ -29,6 +29,6 @@ export class MultiplayerFramework {
     }
 
     private Movement(posX, posY) {
-        this.socket.emit("movement", posX, posY);
+        this.socket.emit("sendMovement", posX, posY);
     }
 }
