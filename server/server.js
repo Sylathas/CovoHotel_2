@@ -37,22 +37,27 @@ io.on("connection", (socket) => {
     //Connection Event
     console.log("User Connected");
     socket.broadcast.emit('newPlayer', socket.id);
-    io.to(socket.id).emit("initialize", connectedPlayers)
-    //connectedPlayer.push(Player(socket.id, 0, 0));
+    io.to(socket.id).emit("initialize", JSON.stringify(connectedPlayers))
+    connectedPlayers.push(new Player(socket.id, "standard", 0, 0, 0));
 
     // User Disconnect
     socket.on('disconnect', () => {
       console.log('User Disconnected');
-      //setTimeout(socket.broadcast.emit('deletePlayer', socket.id), 3000)
+      connectedPlayers = connectedPlayers.filter(function( obj ) {
+        return obj.id !== socket.id;
+      });
     });
+
 });
 
 //Defining Player Class
 class Player {
-  constructor(id, posX, posY) {
+  constructor(id, skin, posX, posY, facing) {
     this.id = id;
+    this.skin = skin;
     this.posX = posX;
     this.posY = posY;
+    this.facing = facing;
   }
 }
 

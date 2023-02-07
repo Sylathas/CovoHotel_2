@@ -24,7 +24,7 @@ export class MultiplayerFramework {
         });
 
         this.socket.on('initialize', (arg) => {
-            console.log("Connected Players " + arg);
+            console.log("Connected Players: " + arg);
         });
     }
 
