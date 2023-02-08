@@ -17,7 +17,6 @@ export class NPC extends TransformNode {
         this.mesh = assets[index];
         this.mesh.parent = this;
         this.mesh.position = position;
-        console.log(this.mesh);
 
         shadowGenerator.addShadowCaster(this.mesh); //the NPC mesh will cast shadows
 

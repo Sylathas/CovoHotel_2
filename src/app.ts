@@ -26,10 +26,10 @@ class App {
     private _input: PlayerInput;
     private _environment;
     private _player: Player;
-    private _npc: NPC;
+    private _npc: NPC[] = [];
     private _environmentTexture: string = "textures/envtext.env"; //environment texture for HDRI and skybox
     private _playerModel: string = "player.glb"; //mesh of the player
-    private _npcModels: string[] = ['player.glb'];
+    private _npcModels: string[] = ['player.glb', 'player.glb'];
 
     //Scene - related
     private _state: number = 0;
@@ -235,16 +235,16 @@ class App {
     }
 
     private async _loadNpcAssets(scene, npcModels) {
-        //click event mesh
-        const outer = MeshBuilder.CreateBox("outer", { width: 2, depth: 1, height: 3 }, scene);
-        outer.isVisible = false;
-        outer.isPickable = true;
-
-        //move origin of box collider to the bottom of the mesh (to match player mesh)
-        outer.bakeTransformIntoVertices(Matrix.Translation(0, 1.5, 0))//collision mesh
- 
-        npcModels.forEach(model => {
+        npcModels.forEach((model, index) => {
             return SceneLoader.ImportMeshAsync(null, "./models/", model, scene).then((result) => {
+                //click event mesh
+                const outer = MeshBuilder.CreateBox("outer" + index, { width: 2, depth: 1, height: 3 }, scene);
+                outer.isVisible = false;
+                outer.isPickable = true;
+
+                //move origin of box collider to the bottom of the mesh (to match player mesh)
+                outer.bakeTransformIntoVertices(Matrix.Translation(0, 1.5, 0))//collision mesh
+
                 const root = result.meshes[0];
                 //body is our actual NPC mesh
                 const body = root;
@@ -276,8 +276,9 @@ class App {
         const camera = this._player.activatePlayerCamera();
 
         //Create NPC
-        this._npc = new NPC(this.npcAssets, scene, shadowGenerator, this._canvas, "mamma", new Vector3(0,30,20), 0);
-        this._npc = new NPC(this.npcAssets, scene, shadowGenerator, this._canvas, "mamma", new Vector3(0,40,20), 0);
+        this._npc.push(new NPC(this.npcAssets, scene, shadowGenerator, this._canvas, "mamma", new Vector3(0,30,20), 0));
+        this._npc.push(new NPC(this.npcAssets, scene, shadowGenerator, this._canvas, "babbo", new Vector3(0,40,20), 1));
+        console.log(this._npc);
         this.socket.on('newPlayer', (arg) => {
             new NPC(this.npcAssets, scene, shadowGenerator, this._canvas, this.socket.id, new Vector3(0,30,10), 0)
         });
