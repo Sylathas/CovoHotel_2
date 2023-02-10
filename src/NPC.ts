@@ -1,4 +1,4 @@
-﻿import { TransformNode, ShadowGenerator, Scene, Mesh, PointerEventTypes } from "@babylonjs/core";
+﻿import { TransformNode, ShadowGenerator, Scene, Mesh, PointerEventTypes, AbstractMesh } from "@babylonjs/core";
 
 export class NPC extends TransformNode {
     public camera;
@@ -6,16 +6,16 @@ export class NPC extends TransformNode {
     private _canvas: HTMLCanvasElement;
 
     //NPC 
-    public mesh: Mesh; //outer collisionbox of NPC
+    public mesh: AbstractMesh; //outer collisionbox of NPC
 
-    constructor(assets, scene: Scene, shadowGenerator: ShadowGenerator, canvas: HTMLCanvasElement, name, position, index) {
+    constructor(scene: Scene, shadowGenerator: ShadowGenerator, canvas: HTMLCanvasElement, name, position) {
         super(name, scene);
         this._canvas = canvas;
         this.scene = scene;
 
         //Initialize the NPC 
-        this.mesh = assets[index];
-        this.mesh.parent = this;
+        const copyMesh = this.scene.getMeshByName(name);
+        this.mesh = copyMesh.clone(name, this);
         this.mesh.position = position;
 
         shadowGenerator.addShadowCaster(this.mesh); //the NPC mesh will cast shadows

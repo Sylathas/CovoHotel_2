@@ -29,7 +29,7 @@ class App {
     private _npc: NPC[] = [];
     private _environmentTexture: string = "textures/envtext.env"; //environment texture for HDRI and skybox
     private _playerModel: string = "player.glb"; //mesh of the player
-    private _npcModels: string[] = ['player.glb', 'player.glb'];
+    private _npcModels: string[] = ['player.glb'];
 
     //Scene - related
     private _state: number = 0;
@@ -236,10 +236,10 @@ class App {
     }
 
     private async _loadNpcAssets(scene, npcModels) {
-        npcModels.forEach((model, index) => {
+        npcModels.forEach((model) => {
             return SceneLoader.ImportMeshAsync(null, "./models/", model, scene).then((result) => {
                 //click event mesh
-                const outer = MeshBuilder.CreateBox("outer" + index, { width: 2, depth: 1, height: 3 }, scene);
+                const outer = MeshBuilder.CreateBox(model, { width: 2, depth: 1, height: 3 }, scene);
                 outer.isVisible = false;
                 outer.isPickable = true;
 
@@ -277,8 +277,8 @@ class App {
         const camera = this._player.activatePlayerCamera();
 
         //Create NPC
-        this._npc.push(new NPC(this.npcAssets, scene, shadowGenerator, this._canvas, "mamma", new Vector3(0,30,20), 0));
-        this._npc.push(new NPC(this.npcAssets, scene, shadowGenerator, this._canvas, "babbo", new Vector3(0,40,20), 1));
+        this._npc.push(new NPC(scene, shadowGenerator, this._canvas, "player.glb", new Vector3(0,30,20)));
+        this._npc.push(new NPC(scene, shadowGenerator, this._canvas, "player.glb", new Vector3(0,40,20)));
 
         //Create Other Users
         this.socket.on('initialize', (arg) => {
@@ -288,7 +288,7 @@ class App {
         this.socket.on('newPlayer', (remoteSocketId) => {
             this.playersIndex = this.playersIndex + 1;
             this.npcAssets.push("player.glb");
-            this.users[remoteSocketId] = new NPC(this.npcAssets, scene, shadowGenerator, this._canvas, remoteSocketId, new Vector3(0,30,10), this.playersIndex);
+            this.users[remoteSocketId] = new NPC(scene, shadowGenerator, this._canvas, remoteSocketId, new Vector3(0,30,10));
         });
         //Manage Other Users Movement
         this.socket.on("playerMoved", (remoteSocketId, posX, posY, posZ) => {
