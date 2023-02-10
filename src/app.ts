@@ -8,6 +8,7 @@ import { Environment } from "./environment";
 import { Player } from "./characterController";
 import { PlayerInput } from "./inputController";
 import { NPC } from "./NPC";
+import { InteractObject } from "./interactObject";
 import { theFramework } from "./multiplayer"
 import { uiElement } from "./uiElement";
 import { io, Socket } from "socket.io-client";
@@ -22,14 +23,15 @@ class App {
 
     //Game State Related
     public assets;
-    public npcAssets = [];
+    public otherAssets = [];
     private _input: PlayerInput;
     private _environment;
     private _player: Player;
     private _npc: NPC[] = [];
+    private _interactObject: InteractObject[] = [];
     private _environmentTexture: string = "textures/envtext.env"; //environment texture for HDRI and skybox
     private _playerModel: string = "player.glb"; //mesh of the player
-    private _npcModels: string[] = ['player.glb'];
+    private _otherModels: string[] = ['player.glb'];
 
     //Scene - related
     private _state: number = 0;
@@ -193,7 +195,7 @@ class App {
         this._environment = environment;
         await this._environment.load(); //environment
         await this._loadCharacterAssets(scene, this._playerModel);
-        await this._loadNpcAssets(scene, this._npcModels);
+        await this._loadOtherAssets(scene, this._otherModels);
     }
 
     private async _loadCharacterAssets(scene, playerModel) {
@@ -235,12 +237,12 @@ class App {
 
     }
 
-    private async _loadNpcAssets(scene, npcModels) {
-        npcModels.forEach((model) => {
+    private async _loadOtherAssets(scene, otherModels) {
+        otherModels.forEach((model) => {
             return SceneLoader.ImportMeshAsync(null, "./models/", model, scene).then((result) => {
                 //click event mesh
                 const outer = MeshBuilder.CreateBox(model, { width: 2, depth: 1, height: 3 }, scene);
-                outer.isVisible = false;
+                outer.visibility = 0;
                 outer.isPickable = true;
 
                 //move origin of box collider to the bottom of the mesh (to match player mesh)
@@ -255,7 +257,7 @@ class App {
                     m.isPickable = false;
                 })
 
-                this.npcAssets.push(outer);
+                this.otherAssets.push(outer);
             });
         });
     }
@@ -280,6 +282,8 @@ class App {
         this._npc.push(new NPC(scene, shadowGenerator, this._canvas, "player.glb", new Vector3(0,30,20)));
         this._npc.push(new NPC(scene, shadowGenerator, this._canvas, "player.glb", new Vector3(0,40,20)));
 
+        this._interactObject.push(new InteractObject(scene, shadowGenerator, this._canvas, "player.glb", new Vector3(10,30,20)));
+
         //Create Other Users
         this.socket.on('initialize', (arg) => {
             console.log("Connected Players: " + arg);
@@ -287,7 +291,7 @@ class App {
         });
         this.socket.on('newPlayer', (remoteSocketId) => {
             this.playersIndex = this.playersIndex + 1;
-            this.npcAssets.push("player.glb");
+            this.otherAssets.push("player.glb");
             this.users[remoteSocketId] = new NPC(scene, shadowGenerator, this._canvas, remoteSocketId, new Vector3(0,30,10));
         });
         //Manage Other Users Movement
