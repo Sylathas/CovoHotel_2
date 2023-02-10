@@ -1,7 +1,7 @@
 import { io, Socket } from "socket.io-client";
 
-export class MultiplayerFramework {
-    public socket: Socket
+class MultiplayerFramework {
+    socket: Socket
 
     constructor() {
         this.socket = io()
@@ -22,13 +22,7 @@ export class MultiplayerFramework {
         this.socket.on('deletePlayer', (arg) => {
             console.log("Player " + arg + " just disconnected from the server");
         });
-
-        this.socket.on('initialize', (arg) => {
-            console.log("Connected Players: " + arg);
-        });
-    }
-
-    private Movement(posX, posY) {
-        this.socket.emit("sendMovement", posX, posY);
     }
 }
+
+export let theFramework = new MultiplayerFramework;

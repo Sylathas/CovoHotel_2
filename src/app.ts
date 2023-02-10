@@ -8,7 +8,7 @@ import { Environment } from "./environment";
 import { Player } from "./characterController";
 import { PlayerInput } from "./inputController";
 import { NPC } from "./NPC";
-import { MultiplayerFramework } from "./multiplayer"
+import { theFramework } from "./multiplayer"
 import { uiElement } from "./uiElement";
 import { io, Socket } from "socket.io-client";
 
@@ -44,8 +44,9 @@ class App {
     private _fadeAnimation: Animation;
 
      // Multiplayer
-     multiplayerFramework = new MultiplayerFramework();
-     socket = this.multiplayerFramework.socket;
+    private socket = theFramework.socket;
+    private users = {};
+    private playersIndex = 3;
 
     constructor() {
         this._canvas = this._createCanvas();
@@ -278,11 +279,21 @@ class App {
         //Create NPC
         this._npc.push(new NPC(this.npcAssets, scene, shadowGenerator, this._canvas, "mamma", new Vector3(0,30,20), 0));
         this._npc.push(new NPC(this.npcAssets, scene, shadowGenerator, this._canvas, "babbo", new Vector3(0,40,20), 1));
-        console.log(this._npc);
-        this.socket.on('newPlayer', (arg) => {
-            new NPC(this.npcAssets, scene, shadowGenerator, this._canvas, this.socket.id, new Vector3(0,30,10), 0)
-        });
 
+        //Create Other Users
+        this.socket.on('initialize', (arg) => {
+            console.log("Connected Players: " + arg);
+            this.users = arg;
+        });
+        this.socket.on('newPlayer', (remoteSocketId) => {
+            this.playersIndex = this.playersIndex + 1;
+            this.npcAssets.push("player.glb");
+            this.users[remoteSocketId] = new NPC(this.npcAssets, scene, shadowGenerator, this._canvas, remoteSocketId, new Vector3(0,30,10), this.playersIndex);
+        });
+        //Manage Other Users Movement
+        this.socket.on("playerMoved", (remoteSocketId, posX, posY, posZ) => {
+            this.users[remoteSocketId].mesh.position = new Vector3(posX, posY, posZ);
+        });
 
         //glow layer
         const gl = new GlowLayer("glow", scene);

@@ -1,10 +1,14 @@
 ﻿import { TransformNode, ShadowGenerator, Scene, Mesh, UniversalCamera, ArcRotateCamera, Vector3, Quaternion, Ray, ParticleSystem, ActionManager, ExecuteCodeAction, Texture, Color4, Color3, SphereParticleEmitter } from "@babylonjs/core";
+import { theFramework } from "./multiplayer";
 
 export class Player extends TransformNode {
     public camera;
     public scene: Scene;
     private _input;
     private _canvas: HTMLCanvasElement;
+
+    //Multiplayer
+    private socket = theFramework.socket;
 
     //Player
     public mesh: Mesh; //outer collisionbox of player
@@ -149,6 +153,9 @@ export class Player extends TransformNode {
         this.mesh.rotationQuaternion = Quaternion.Slerp(this.mesh.rotationQuaternion, targ, 2 * this._deltaTime);
         //camera rotation
         this._camRoot.rotation = Vector3.Lerp(this._camRoot.rotation, new Vector3(this._camRoot.rotation.x, angle, this._camRoot.rotation.z), 2 * this._deltaTime);
+
+        //Updating position to remote server
+        this.socket.emit("playerMoved", this.mesh.position._x, this.mesh.position._y, this.mesh.position._z);
     }
 
     //--GROUND DETECTION--

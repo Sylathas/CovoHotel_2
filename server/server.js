@@ -17,7 +17,7 @@ const PORT = process.env.PORT || 8080;
 // Socket.io
 const { Server } = require("socket.io");
 const io = new Server(server);
-var connectedPlayers = [];
+var connectedPlayers = {};
 
 // Send Index.html To Client
 app.get('*', (req, res) => {
@@ -38,14 +38,20 @@ io.on("connection", (socket) => {
     console.log("User Connected");
     socket.broadcast.emit('newPlayer', socket.id);
     io.to(socket.id).emit("initialize", JSON.stringify(connectedPlayers))
-    connectedPlayers.push(new Player(socket.id, "standard", 0, 0, 0));
+    connectedPlayers[socket.id] = new Player(socket.id, "standard", 0, 0, 0);
 
     // User Disconnect
     socket.on('disconnect', () => {
       console.log('User Disconnected');
-      connectedPlayers = connectedPlayers.filter(function( obj ) {
-        return obj.id !== socket.id;
-      });
+      delete connectedPlayers[socket.id]; //Remove from Connected Player List
+    });
+
+    //Player Movement
+    socket.on('playerMoved', (posX, posY, posZ) => {
+      connectedPlayers[socket.id].posX = posX;
+      connectedPlayers[socket.id].posY = posY;
+      connectedPlayers[socket.id].posZ = posZ;
+      socket.emit('playerMoved', socket.id, posX, posY, posZ);
     });
 
 });
