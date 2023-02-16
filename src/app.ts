@@ -84,6 +84,8 @@ class App {
 
         this._fadeAnimation.setKeys(keyFrames);
 
+        
+
         // run the main render loop 
         this._main();
     }
@@ -133,6 +135,12 @@ class App {
                     break;
                 default: break;
             }
+        });
+
+        //Initialize
+        this.socket.on('initialize', (arg) => {
+            console.log("Connected Players: " + arg);
+            this.users = arg;
         });
 
         //resize if the screen is resized/rotated
@@ -281,10 +289,7 @@ class App {
         this._npc.push(new NPC(this.npcAssets, scene, shadowGenerator, this._canvas, "babbo", new Vector3(0,40,20), 1));
 
         //Create Other Users
-        this.socket.on('initialize', (arg) => {
-            console.log("Connected Players: " + arg);
-            this.users = arg;
-        });
+        
         this.socket.on('newPlayer', (remoteSocketId) => {
             this.playersIndex = this.playersIndex + 1;
             this.npcAssets.push("player.glb");
