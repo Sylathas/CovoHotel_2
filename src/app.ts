@@ -86,6 +86,8 @@ class App {
 
         this._fadeAnimation.setKeys(keyFrames);
 
+        
+
         // run the main render loop 
         this._main();
     }
@@ -135,6 +137,12 @@ class App {
                     break;
                 default: break;
             }
+        });
+
+        //Initialize
+        this.socket.on('initialize', (arg) => {
+            console.log("Connected Players: " + arg);
+            this.users = arg;
         });
 
         //resize if the screen is resized/rotated
@@ -285,10 +293,7 @@ class App {
         this._interactObject.push(new InteractObject(scene, shadowGenerator, this._canvas, "player.glb", new Vector3(10,30,20)));
 
         //Create Other Users
-        this.socket.on('initialize', (arg) => {
-            console.log("Connected Players: " + arg);
-            this.users = arg;
-        });
+        
         this.socket.on('newPlayer', (remoteSocketId) => {
             this.playersIndex = this.playersIndex + 1;
             this.otherAssets.push("player.glb");
