@@ -139,6 +139,9 @@ export class Player extends TransformNode {
         //final movement that takes into consideration the inputs
         this._moveDirection = this._moveDirection.scaleInPlace(this._inputAmt * Player.PLAYER_SPEED);
 
+        //Updating position to remote server
+        this.socket.emit("playerMoving", this.mesh.position._x, this.mesh.position._y, this.mesh.position._z);
+
         //Rotations
         //check if there is movement to determine if rotation is needed
         let input = new Vector3(this._input.horizontalAxis, 0, this._input.verticalAxis); //along which axis is the direction
@@ -154,8 +157,6 @@ export class Player extends TransformNode {
         //camera rotation
         this._camRoot.rotation = Vector3.Lerp(this._camRoot.rotation, new Vector3(this._camRoot.rotation.x, angle, this._camRoot.rotation.z), 2 * this._deltaTime);
 
-        //Updating position to remote server
-        this.socket.emit("playerMoved", this.mesh.position._x, this.mesh.position._y, this.mesh.position._z);
     }
 
     //--GROUND DETECTION--
@@ -337,7 +338,7 @@ export class Player extends TransformNode {
 
         //Effect on collide
         this.camera.onCollide = function (collidedMesh) {
-            console.log(collidedMesh);
+            //console.log(collidedMesh);
         }
         
         this.camera.inputs.remove(this.camera.inputs.attached.keyboard); //Remove keyboard controls 

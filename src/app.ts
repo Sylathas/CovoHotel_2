@@ -39,6 +39,7 @@ class App {
     private _cutScene: Scene;
 
     //Camera related
+    private shadowGenerator;
     private _mouseDown: boolean = false;
 
     //Camera Raycasting
@@ -140,12 +141,6 @@ class App {
                     break;
                 default: break;
             }
-        });
-
-        //Initialize
-        this.socket.on('initialize', (arg) => {
-            console.log("Connected Players: " + arg);
-            this.users = arg;
         });
 
         //resize if the screen is resized/rotated
@@ -282,30 +277,18 @@ class App {
         light.intensity = 35;
         light.radius = 1;
 
-        const shadowGenerator = new ShadowGenerator(1024, light);
-        shadowGenerator.darkness = 0.4;
+        this.shadowGenerator = new ShadowGenerator(1024, light);
+        this.shadowGenerator.darkness = 0.4;
 
         //Create the player
-        this._player = new Player(this.assets, scene, shadowGenerator, this._canvas, this._input);
+        this._player = new Player(this.assets, scene, this.shadowGenerator, this._canvas, this._input);
         const camera = this._player.activatePlayerCamera();
 
         //Create NPC
-        this._npc.push(new NPC(scene, shadowGenerator, this._canvas, "player.glb", new Vector3(0,30,20)));
-        this._npc.push(new NPC(scene, shadowGenerator, this._canvas, "player.glb", new Vector3(0,40,20)));
+        this._npc.push(new NPC(scene, this.shadowGenerator, this._canvas, "player.glb", new Vector3(0,30,20)));
+        this._npc.push(new NPC(scene, this.shadowGenerator, this._canvas, "player.glb", new Vector3(0,40,20)));
 
-        this._interactObject.push(new InteractObject(scene, shadowGenerator, this._canvas, "player.glb", new Vector3(10,30,20)));
-
-        //Create Other Users
-        
-        this.socket.on('newPlayer', (remoteSocketId) => {
-            this.playersIndex = this.playersIndex + 1;
-            this.otherAssets.push("player.glb");
-            this.users[remoteSocketId] = new NPC(scene, shadowGenerator, this._canvas, remoteSocketId, new Vector3(0,30,10));
-        });
-        //Manage Other Users Movement
-        this.socket.on("playerMoved", (remoteSocketId, posX, posY, posZ) => {
-            this.users[remoteSocketId].mesh.position = new Vector3(posX, posY, posZ);
-        });
+        this._interactObject.push(new InteractObject(scene, this.shadowGenerator, this._canvas, "player.glb", new Vector3(10,30,20)));
 
         //glow layer
         const gl = new GlowLayer("glow", scene);
@@ -442,7 +425,38 @@ class App {
 
         this._scene.registerAfterRender(() => {
             //Get time between last and this frame
-            this.deltaTime = this._engine.getDeltaTime();
+            this.deltaTime = this._engine.getDeltaTime();      
+        });
+
+        //Multiplayer
+
+        //Initialize
+        this.socket.on('initialize', (arg) => {
+            console.log("Connected Players: " + arg);
+            console.log(arg);
+        });
+
+        //Create Other Users
+        this.socket.on('newPlayer', (remoteSocketId) => {
+            console.log("A new player joined with id: " + remoteSocketId);
+            this.playersIndex = this.playersIndex + 1;
+            this.otherAssets.push("player.glb");
+            this.users[remoteSocketId] = new NPC(scene, this.shadowGenerator, this._canvas, "player.glb", new Vector3(this._scene.getMeshByName('outer').position.x, this._scene.getMeshByName('outer').position.y + 0.5, this._scene.getMeshByName('outer').position.z));
+            console.log(this.users);
+        });
+        
+        //Manage Other Users Movement
+        this.socket.on('playerMoved', (remoteSocketId, posX, posY, posZ) => {
+            if (this.users[remoteSocketId] == null) {
+                this.users[remoteSocketId] = new NPC(scene, this.shadowGenerator, this._canvas, "player.glb", new Vector3(posX, posY, posZ));
+            } else { this.users[remoteSocketId].mesh.position = new Vector3(posX, posY, posZ);}
+        });
+
+        //Delete disconnected player
+        this.socket.on('deletePlayer', (arg) => {
+            console.log("Player " + arg + " just disconnected from the server");
+            this.users[arg].mesh.dispose();
+            delete this.users[arg];
         });
     }
 

@@ -38,20 +38,21 @@ io.on("connection", (socket) => {
     console.log("User Connected");
     socket.broadcast.emit('newPlayer', socket.id);
     io.to(socket.id).emit("initialize", JSON.stringify(connectedPlayers))
-    connectedPlayers[socket.id] = new Player(socket.id, "standard", 0, 0, 0);
+    connectedPlayers[socket.id] = new Player(socket.id, "player.glb", 0, 0, 0);
 
     // User Disconnect
     socket.on('disconnect', () => {
       console.log('User Disconnected');
+      socket.broadcast.emit('deletePlayer', socket.id);
       delete connectedPlayers[socket.id]; //Remove from Connected Player List
     });
 
     //Player Movement
-    socket.on('playerMoved', (posX, posY, posZ) => {
+    socket.on('playerMoving', (posX, posY, posZ) => {
       connectedPlayers[socket.id].posX = posX;
       connectedPlayers[socket.id].posY = posY;
       connectedPlayers[socket.id].posZ = posZ;
-      socket.emit('playerMoved', socket.id, posX, posY, posZ);
+      socket.broadcast.emit('playerMoved', socket.id, posX, posY, posZ);
     });
 
 });
