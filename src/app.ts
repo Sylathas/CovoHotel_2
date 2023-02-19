@@ -31,7 +31,7 @@ class App {
     private _interactObject: InteractObject[] = [];
     private _environmentTexture: string = "textures/envtext.env"; //environment texture for HDRI and skybox
     private _playerModel: string = "player.glb"; //mesh of the player
-    private _otherModels: string[] = ['player.glb'];
+    private _otherModels: string[] = ['player.glb']; //mesh of npcs and interactive objects
 
     //Scene - related
     private _state: number = 0;
@@ -45,10 +45,13 @@ class App {
     private _hits: PickingInfo[] = [];
     private _fadeAnimation: Animation;
 
-     // Multiplayer
+     //Multiplayer
     private socket = theFramework.socket;
     private users = {};
     private playersIndex = 3;
+
+    //Tools for syncronizing
+    private deltaTime: number;
 
     constructor() {
         this._canvas = this._createCanvas();
@@ -407,12 +410,14 @@ class App {
         //the game is ready, attach control back
         this._scene.attachControl();
 
+        //Add fade animation to all the meshes in the scene
         this._scene.meshes.forEach(mesh => {
             mesh.animations.push(this._fadeAnimation);
         });
 
         let lastMousePos = this._scene.pointerX;
 
+        //Update the state of the mouseDown variable and lastMousePos depending on the mouse action and position
         this._scene.onPointerObservable.add((pointerInfo) => {
             switch (pointerInfo.type) {
                 case PointerEventTypes.POINTERDOWN:
@@ -431,7 +436,13 @@ class App {
         });
 
         this._scene.registerBeforeRender(() => {
+            // Make meshes between player and camera turn transparent
             this._checkFrontCamera();
+        });
+
+        this._scene.registerAfterRender(() => {
+            //Get time between last and this frame
+            this.deltaTime = this._engine.getDeltaTime();
         });
     }
 
