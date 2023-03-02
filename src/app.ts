@@ -462,8 +462,7 @@ class App {
         //Manage Sounds
         const music = new Sound("music", "/sounds/farnemolti.wav", scene, null,
           {
-            autoplay: true,
-            
+            autoplay: true, 
             loop: true,
             spatialSound: true,
           });
