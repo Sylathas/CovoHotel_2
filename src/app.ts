@@ -2,7 +2,7 @@
 import "@babylonjs/inspector";
 import "@babylonjs/loaders/glTF";
 
-import { Engine, Scene, Vector3, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, CubeTexture, Texture, PointerEventTypes, Ray, Animation, PickingInfo } from "@babylonjs/core";
+import { Engine, Scene, Vector3, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, CubeTexture, Texture, PointerEventTypes, Ray, Animation, PickingInfo, Sound} from "@babylonjs/core";
 import { AdvancedDynamicTexture, Button, Control, Image, Container } from "@babylonjs/gui";
 import { Environment } from "./environment";
 import { Player } from "./characterController";
@@ -57,7 +57,7 @@ class App {
     constructor() {
         this._canvas = this._createCanvas();
 
-        // initialize babylon scene and engine
+        // initialize babylon scene and engines
         this._engine = new Engine(this._canvas, true);
         this._scene = new Scene(this._engine);
 
@@ -458,6 +458,14 @@ class App {
             this.users[arg].mesh.dispose();
             delete this.users[arg];
         });
+
+        //Manage Sounds
+        const music = new Sound("music", "/sounds/farnemolti.wav", scene, null,
+          {
+            autoplay: true,
+            loop: true,
+            spatialSound: true,
+          });
     }
 
     //Check if something is between the camera and the player
