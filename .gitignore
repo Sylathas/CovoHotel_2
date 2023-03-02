@@ -1,2 +1,4 @@
 /dist
 /public/sounds
+
+.DS_Store
