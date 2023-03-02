@@ -1,3 +1,2 @@
-dist/
-
-public/sounds
+/dist
+/public/sounds
