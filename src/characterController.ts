@@ -363,6 +363,8 @@ export class Player extends TransformNode {
         let centerPlayer = this.mesh.position.y + 2;
         if(this.scene.getTransformNodeById('convOpen').isEnabled()){
             this._camRoot.position = Vector3.Lerp(this._camRoot.position, new Vector3(this.mesh.position.x, centerPlayer, this.mesh.position.z), 0.4);
+        } else{
+            
         }
         if(this.camera.radius < 1) {
             this.mesh.setEnabled(false);
