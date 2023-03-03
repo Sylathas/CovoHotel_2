@@ -2,7 +2,7 @@
 import "@babylonjs/inspector";
 import "@babylonjs/loaders/glTF";
 
-import { Engine, Scene, Vector3, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, CubeTexture, Texture, PointerEventTypes, Ray, Animation, PickingInfo, AnimationGroup, TransformNode, Sound } from "@babylonjs/core";
+import { Engine, Scene, Vector3, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, HDRCubeTexture, Texture, PointerEventTypes, Ray, Animation, PickingInfo, AnimationGroup, TransformNode, Sound } from "@babylonjs/core";
 import { AdvancedDynamicTexture, Button, Control, Container } from "@babylonjs/gui";
 import { Environment } from "./environment";
 import { Player } from "./characterController";
@@ -37,7 +37,7 @@ class App {
     private _player: Player;
     private _npc: NPC[] = [];
     private _interactObject: InteractObject[] = [];
-    private _environmentTexture: string = "textures/envtext.env"; //environment texture for HDRI and skybox
+    private _environmentTexture: string = "textures/env.hdr"; //environment texture for HDRI and skybox
     private _playerModel: string = "player_animated.glb"; //mesh of the player
     private _otherModels: string[] = ["player_animated.glb"]; //mesh of npcs and interactive objects
     public _convOpen: boolean = false;
@@ -261,7 +261,7 @@ class App {
                 //click event mesh
                 const outer = MeshBuilder.CreateBox(model, { width: 2, depth: 1, height: 3 }, scene);
                 outer.visibility = 0;
-                outer.isPickable = false;
+                outer.isPickable = true;
 
                 //move origin of box collider to the bottom of the mesh (to match player mesh)
                 outer.bakeTransformIntoVertices(Matrix.Translation(0, 1.5, 0))//collision mesh
@@ -270,9 +270,9 @@ class App {
                 //body is our actual NPC mesh
                 const body = root;
                 body.parent = outer;
-                body.isPickable = true; //the click trigger is the outer mesh, not the player
+                body.isPickable = false; //the click trigger is the outer mesh, not the player
                 body.getChildMeshes().forEach(m => {
-                    m.isPickable = true;
+                    m.isPickable = false;
                 });
 
                 return {
@@ -291,8 +291,8 @@ class App {
     }
 
     private async _initializeGameAsync(scene): Promise<void> {
-        scene.ambientColor = new Color3(0.34509803921568627, 0.5568627450980392, 0.8352941176470589);
-        scene.clearColor = new Color4(0.01568627450980392, 0.01568627450980392, 0.20392156862745098);
+        scene.ambientColor = new Color3(0, 0, 0);
+        scene.clearColor = new Color4(0, 0, 0);
 
         const light = new PointLight("sparklight", new Vector3(0, 0, 0), scene);
         light.diffuse = new Color3(0.08627450980392157, 0.10980392156862745, 0.15294117647058825);
@@ -384,21 +384,11 @@ class App {
         scene.detachControl();
 
         //IBL (image based lighting) - to give scene an ambient light
-        const envHdri = CubeTexture.CreateFromPrefilteredData(this._environmentTexture, scene);
+        const envHdri = new HDRCubeTexture(this._environmentTexture, scene, 512);
         envHdri.name = "env";
         envHdri.gammaSpace = false;
         scene.environmentTexture = envHdri;
-        scene.environmentIntensity = 0.04;
-
-        //Create skybox
-        const skybox = MeshBuilder.CreateBox("skyBox", { size: 1000.0 }, scene);
-        const skyboxMaterial = new StandardMaterial("skyBox", scene);
-        skyboxMaterial.backFaceCulling = false;
-        skyboxMaterial.reflectionTexture = CubeTexture.CreateFromPrefilteredData(this._environmentTexture, scene);
-        skyboxMaterial.reflectionTexture.coordinatesMode = Texture.SKYBOX_MODE;
-        skyboxMaterial.diffuseColor = new Color3(0, 0, 0);
-        skyboxMaterial.specularColor = new Color3(0, 0, 0);
-        skybox.material = skyboxMaterial;
+        scene.environmentIntensity = 0.01;
 
         //--INPUT--
         this._input = new PlayerInput(scene, this._canvas); //detect keyboard/mobile inputs
@@ -421,6 +411,11 @@ class App {
         //Add fade animation to all the meshes in the scene
         this._scene.meshes.forEach(mesh => {
             mesh.animations.push(this._fadeAnimation);
+            this._npc.forEach(npc => {
+                if(mesh.name === npc.name){
+                    mesh.animations.pop();
+                }
+            });
         });
 
         let lastMousePos = this._scene.pointerX;

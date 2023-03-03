@@ -33,7 +33,7 @@ export class Player extends TransformNode {
     private _jumped: boolean = false;
 
     //const values
-    private static readonly PLAYER_SPEED: number = 0.45;
+    private static readonly PLAYER_SPEED: number = 0.2;
     private static readonly JUMP_FORCE: number = 0.45;
     private static readonly GRAVITY: number = -1.8;
     private static readonly DASH_FACTOR: number = 2;
