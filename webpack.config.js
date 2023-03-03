@@ -55,6 +55,7 @@ module.exports = {
       patterns: [
         { from: "./public/models", to: "models" },
         { from: "./public/textures", to: "textures" },
+        { from: "./public/sounds", to: "sounds" },
       ]
     }),
     new HtmlWebpackPlugin({

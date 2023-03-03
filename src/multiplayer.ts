@@ -14,14 +14,6 @@ class MultiplayerFramework {
             console.log('Disconnected from Covo Multiplayer System' + message);
             location.reload()
         });
-
-        this.socket.on('newPlayer', (arg) => {
-            console.log("A new player joined with id: " + arg);
-        });
-
-        this.socket.on('deletePlayer', (arg) => {
-            console.log("Player " + arg + " just disconnected from the server");
-        });
     }
 }
 

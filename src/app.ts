@@ -2,7 +2,11 @@
 import "@babylonjs/inspector";
 import "@babylonjs/loaders/glTF";
 
+<<<<<<< HEAD
 import { Engine, Scene, Vector3, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, CubeTexture, Texture, PointerEventTypes, Ray, Animation, PickingInfo, AnimationGroup, TransformNode } from "@babylonjs/core";
+=======
+import { Engine, Scene, Vector3, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, CubeTexture, Texture, PointerEventTypes, Ray, Animation, PickingInfo, Sound} from "@babylonjs/core";
+>>>>>>> a28f693550bd638c29dd0c4c0f3a7466c0947332
 import { AdvancedDynamicTexture, Button, Control, Image, Container } from "@babylonjs/gui";
 import { Environment } from "./environment";
 import { Player } from "./characterController";
@@ -48,6 +52,7 @@ class App {
     private _cutScene: Scene;
 
     //Camera related
+    private shadowGenerator;
     private _mouseDown: boolean = false;
 
     //Camera Raycasting
@@ -65,7 +70,7 @@ class App {
     constructor() {
         this._canvas = this._createCanvas();
 
-        // initialize babylon scene and engine
+        // initialize babylon scene and engines
         this._engine = new Engine(this._canvas, true);
         this._scene = new Scene(this._engine);
 
@@ -149,12 +154,6 @@ class App {
                     break;
                 default: break;
             }
-        });
-
-        //Initialize
-        this.socket.on('initialize', (arg) => {
-            console.log("Connected Players: " + arg);
-            this.users = arg;
         });
 
         //resize if the screen is resized/rotated
@@ -304,21 +303,21 @@ class App {
         light.intensity = 35;
         light.radius = 1;
 
-        const shadowGenerator = new ShadowGenerator(1024, light);
-        shadowGenerator.darkness = 0.4;
+        this.shadowGenerator = new ShadowGenerator(1024, light);
+        this.shadowGenerator.darkness = 0.4;
 
         //Create a Node that is used to check for the convOpen
         new TransformNode('convOpen', scene);
 
         //Create the player
-        this._player = new Player(this.assets, scene, shadowGenerator, this._canvas, this._input);
+        this._player = new Player(this.assets, scene, this.shadowGenerator, this._canvas, this._input);
         const camera = this._player.activatePlayerCamera();
 
         //Create NPC
-        this._npc.push(new NPC(this._otherModels["player_animated.glb"], scene, shadowGenerator, new Vector3(0,0,20), 'npc1', camera, this._canvas));
-        this._npc.push(new NPC(this._otherModels["player_animated.glb"], scene, shadowGenerator, new Vector3(10,0,20), 'npc2', camera, this._canvas));
+    this._npc.push(new NPC(scene, this.shadowGenerator, this._canvas, "player.glb", new Vector3(0,30,20)));
+    this._npc.push(new NPC(scene, this.shadowGenerator, this._canvas, "player.glb", new Vector3(0,40,20)));
 
-        this._interactObject.push(new InteractObject(this._otherModels["player_animated.glb"], scene, shadowGenerator, this._canvas, new Vector3(10,30,20), 'oggetto1'));
+    this._interactObject.push(new InteractObject(scene, this.shadowGenerator, this._canvas, "player.glb", new Vector3(10,30,20)));
 
         //Create Other Users
         this.socket.on('newPlayer', (remoteSocketId) => {
@@ -464,8 +463,47 @@ class App {
 
         this._scene.registerAfterRender(() => {
             //Get time between last and this frame
-            this.deltaTime = this._engine.getDeltaTime();
+            this.deltaTime = this._engine.getDeltaTime();      
         });
+
+        //Multiplayer
+
+        //Initialize
+        this.socket.on('initialize', (arg) => {
+            console.log("Connected Players: " + arg);
+            console.log(arg);
+        });
+
+        //Create Other Users
+        this.socket.on('newPlayer', (remoteSocketId) => {
+            console.log("A new player joined with id: " + remoteSocketId);
+            this.playersIndex = this.playersIndex + 1;
+            this.otherAssets.push("player.glb");
+            this.users[remoteSocketId] = new NPC(scene, this.shadowGenerator, this._canvas, "player.glb", new Vector3(this._scene.getMeshByName('outer').position.x, this._scene.getMeshByName('outer').position.y + 0.5, this._scene.getMeshByName('outer').position.z));
+            console.log(this.users);
+        });
+        
+        //Manage Other Users Movement
+        this.socket.on('playerMoved', (remoteSocketId, posX, posY, posZ) => {
+            if (this.users[remoteSocketId] == null) {
+                this.users[remoteSocketId] = new NPC(scene, this.shadowGenerator, this._canvas, "player.glb", new Vector3(posX, posY, posZ));
+            } else { this.users[remoteSocketId].mesh.position = new Vector3(posX, posY, posZ);}
+        });
+
+        //Delete disconnected player
+        this.socket.on('deletePlayer', (arg) => {
+            console.log("Player " + arg + " just disconnected from the server");
+            this.users[arg].mesh.dispose();
+            delete this.users[arg];
+        });
+
+        //Manage Sounds
+        const music = new Sound("music", "/sounds/farnemolti.wav", scene, null,
+          {
+            autoplay: true, 
+            loop: true,
+            spatialSound: true,
+          });
     }
 
     //Check if something is between the camera and the player
