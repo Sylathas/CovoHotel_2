@@ -74,9 +74,9 @@ export class NPC extends TransformNode {
                 } else { // If we're close enough, finalize movement and disable animation
                     this.scene.getTransformNodeById('root').position = this.nextCameraTarget;
                     this.enableAnim = false;
-                    this.camera.attachControl(this.canvas, true);
                     if(this.nextCameraTarget === this.oldPos) {
                         this.scene.getTransformNodeById('convOpen').setEnabled(true);
+                        this.camera.attachControl(this.canvas, true);
                     }
                 }
             }

@@ -3,7 +3,6 @@
 export class InteractObject extends TransformNode {
     public camera;
     public scene: Scene;
-    private _canvas: HTMLCanvasElement;
 
     //Animation
     private _idle: AnimationGroup;
@@ -11,9 +10,8 @@ export class InteractObject extends TransformNode {
     //NPC 
     public mesh: AbstractMesh; //outer collisionbox of Interactible Object
 
-    constructor(assets ,scene: Scene, shadowGenerator: ShadowGenerator, canvas: HTMLCanvasElement, position, name) {
+    constructor(assets ,scene: Scene, shadowGenerator: ShadowGenerator, position, name) {
         super(name, scene);
-        this._canvas = canvas;
         this.scene = scene;
 
         //Initialize the Interactible Object 

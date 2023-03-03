@@ -2,12 +2,8 @@
 import "@babylonjs/inspector";
 import "@babylonjs/loaders/glTF";
 
-<<<<<<< HEAD
-import { Engine, Scene, Vector3, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, CubeTexture, Texture, PointerEventTypes, Ray, Animation, PickingInfo, AnimationGroup, TransformNode } from "@babylonjs/core";
-=======
-import { Engine, Scene, Vector3, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, CubeTexture, Texture, PointerEventTypes, Ray, Animation, PickingInfo, Sound} from "@babylonjs/core";
->>>>>>> a28f693550bd638c29dd0c4c0f3a7466c0947332
-import { AdvancedDynamicTexture, Button, Control, Image, Container } from "@babylonjs/gui";
+import { Engine, Scene, Vector3, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, CubeTexture, Texture, PointerEventTypes, Ray, Animation, PickingInfo, AnimationGroup, TransformNode, Sound } from "@babylonjs/core";
+import { AdvancedDynamicTexture, Button, Control, Container } from "@babylonjs/gui";
 import { Environment } from "./environment";
 import { Player } from "./characterController";
 import { PlayerInput } from "./inputController";
@@ -314,20 +310,11 @@ class App {
         const camera = this._player.activatePlayerCamera();
 
         //Create NPC
-    this._npc.push(new NPC(scene, this.shadowGenerator, this._canvas, "player.glb", new Vector3(0,30,20)));
-    this._npc.push(new NPC(scene, this.shadowGenerator, this._canvas, "player.glb", new Vector3(0,40,20)));
+        console.log(this._otherModels);
+        this._npc.push(new NPC(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(10,2,10), 'npc1', camera, this._canvas));
+        this._npc.push(new NPC(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(10,2,20), 'npc2', camera, this._canvas));
 
-    this._interactObject.push(new InteractObject(scene, this.shadowGenerator, this._canvas, "player.glb", new Vector3(10,30,20)));
-
-        //Create Other Users
-        this.socket.on('newPlayer', (remoteSocketId) => {
-            this.playersIndex = this.playersIndex + 1;
-            this.users[remoteSocketId] = new NPC(this._otherModels[remoteSocketId], scene, shadowGenerator, new Vector3(0,30,10), remoteSocketId, camera, this._canvas);
-        });
-        //Manage Other Users Movement
-        this.socket.on("playerMoved", (remoteSocketId, posX, posY, posZ) => {
-            this.users[remoteSocketId].mesh.position = new Vector3(posX, posY, posZ);
-        });
+        this._interactObject.push(new InteractObject(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(10,2,20), 'npc2'));
 
         //glow layer
         const gl = new GlowLayer("glow", scene);
@@ -448,7 +435,7 @@ class App {
                     this._mouseDown = false;
                     break;
                 case PointerEventTypes.POINTERMOVE:
-                    if (this._mouseDown) {
+                    if (this._mouseDown && this._scene.getTransformNodeById('convOpen').isEnabled()) {
                         this._scene.cameras[0]._cache.parent.rotation.y += (this._scene.pointerX - lastMousePos) / 100;
                     }
                     lastMousePos = this._scene.pointerX;
@@ -478,15 +465,14 @@ class App {
         this.socket.on('newPlayer', (remoteSocketId) => {
             console.log("A new player joined with id: " + remoteSocketId);
             this.playersIndex = this.playersIndex + 1;
-            this.otherAssets.push("player.glb");
-            this.users[remoteSocketId] = new NPC(scene, this.shadowGenerator, this._canvas, "player.glb", new Vector3(this._scene.getMeshByName('outer').position.x, this._scene.getMeshByName('outer').position.y + 0.5, this._scene.getMeshByName('outer').position.z));
+            this.users[remoteSocketId] = new NPC(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(this._scene.getMeshByName('outer').position.x, this._scene.getMeshByName('outer').position.y + 0.5, this._scene.getMeshByName('outer').position.z), "player.glb", this._scene.cameras[0], this._canvas);
             console.log(this.users);
         });
         
         //Manage Other Users Movement
         this.socket.on('playerMoved', (remoteSocketId, posX, posY, posZ) => {
             if (this.users[remoteSocketId] == null) {
-                this.users[remoteSocketId] = new NPC(scene, this.shadowGenerator, this._canvas, "player.glb", new Vector3(posX, posY, posZ));
+                this.users[remoteSocketId] = new NPC(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(posX, posY, posZ), "player.glb", this._scene.cameras[0], this._canvas);
             } else { this.users[remoteSocketId].mesh.position = new Vector3(posX, posY, posZ);}
         });
 
