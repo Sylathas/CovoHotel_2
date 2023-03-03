@@ -2,7 +2,7 @@
 import "@babylonjs/inspector";
 import "@babylonjs/loaders/glTF";
 
-import { Engine, Scene, Vector3, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, CubeTexture, Texture, PointerEventTypes, Ray, Animation, PickingInfo } from "@babylonjs/core";
+import { Engine, Scene, Vector3, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, CubeTexture, Texture, PointerEventTypes, Ray, Animation, PickingInfo, AnimationGroup, TransformNode } from "@babylonjs/core";
 import { AdvancedDynamicTexture, Button, Control, Image, Container } from "@babylonjs/gui";
 import { Environment } from "./environment";
 import { Player } from "./characterController";
@@ -15,7 +15,15 @@ import { io, Socket } from "socket.io-client";
 
 enum State { START = 0, GAME = 1, LOSE = 2, CUTSCENE = 3 }
 
+//Dictionary Types
+type NPCAssets = {
+   mesh: Mesh;
+   animationGroups: AnimationGroup;
+   name: string;
+}
+
 class App {
+
     //General Entire Application
     private _scene: Scene;
     private _canvas: HTMLCanvasElement;
@@ -23,15 +31,16 @@ class App {
 
     //Game State Related
     public assets;
-    public otherAssets = [];
+    public otherAssets : { [name: string]: NPCAssets } = {};
     private _input: PlayerInput;
     private _environment;
     private _player: Player;
     private _npc: NPC[] = [];
     private _interactObject: InteractObject[] = [];
     private _environmentTexture: string = "textures/envtext.env"; //environment texture for HDRI and skybox
-    private _playerModel: string = "player.glb"; //mesh of the player
-    private _otherModels: string[] = ['player.glb']; //mesh of npcs and interactive objects
+    private _playerModel: string = "player_animated.glb"; //mesh of the player
+    private _otherModels: string[] = ["player_animated.glb"]; //mesh of npcs and interactive objects
+    public _convOpen: boolean = false;
 
     //Scene - related
     private _state: number = 0;
@@ -229,6 +238,7 @@ class App {
 
             return SceneLoader.ImportMeshAsync(null, "./models/", playerModel, scene).then((result) => {
                 const root = result.meshes[0];
+                root.isPickable = false;
                 //body is our actual player mesh
                 const body = root;
                 body.parent = outer;
@@ -239,6 +249,7 @@ class App {
 
                 return {
                     mesh: outer as Mesh,
+                    animationGroups: result.animationGroups
                 }
             });
         }
@@ -249,12 +260,13 @@ class App {
     }
 
     private async _loadOtherAssets(scene, otherModels) {
-        otherModels.forEach((model) => {
+
+        async function loadOtherModels(model) {
             return SceneLoader.ImportMeshAsync(null, "./models/", model, scene).then((result) => {
                 //click event mesh
                 const outer = MeshBuilder.CreateBox(model, { width: 2, depth: 1, height: 3 }, scene);
                 outer.visibility = 0;
-                outer.isPickable = true;
+                outer.isPickable = false;
 
                 //move origin of box collider to the bottom of the mesh (to match player mesh)
                 outer.bakeTransformIntoVertices(Matrix.Translation(0, 1.5, 0))//collision mesh
@@ -263,12 +275,22 @@ class App {
                 //body is our actual NPC mesh
                 const body = root;
                 body.parent = outer;
-                body.isPickable = false; //the click trigger is the outer mesh, not the player
+                body.isPickable = true; //the click trigger is the outer mesh, not the player
                 body.getChildMeshes().forEach(m => {
-                    m.isPickable = false;
-                })
+                    m.isPickable = true;
+                });
 
-                this.otherAssets.push(outer);
+                return {
+                    mesh: outer as Mesh,
+                    animationGroups: result.animationGroups,
+                    name: model
+                }
+            });
+        }
+
+        otherModels.forEach((model) => {
+            return loadOtherModels(model).then(assets => {
+                otherModels[assets.name] = { mesh: assets.mesh, animationGroups: assets.animationGroups, name: assets.name}
             });
         });
     }
@@ -285,22 +307,23 @@ class App {
         const shadowGenerator = new ShadowGenerator(1024, light);
         shadowGenerator.darkness = 0.4;
 
+        //Create a Node that is used to check for the convOpen
+        new TransformNode('convOpen', scene);
+
         //Create the player
         this._player = new Player(this.assets, scene, shadowGenerator, this._canvas, this._input);
         const camera = this._player.activatePlayerCamera();
 
         //Create NPC
-        this._npc.push(new NPC(scene, shadowGenerator, this._canvas, "player.glb", new Vector3(0,30,20)));
-        this._npc.push(new NPC(scene, shadowGenerator, this._canvas, "player.glb", new Vector3(0,40,20)));
+        this._npc.push(new NPC(this._otherModels["player_animated.glb"], scene, shadowGenerator, new Vector3(0,0,20), 'npc1', camera, this._canvas));
+        this._npc.push(new NPC(this._otherModels["player_animated.glb"], scene, shadowGenerator, new Vector3(10,0,20), 'npc2', camera, this._canvas));
 
-        this._interactObject.push(new InteractObject(scene, shadowGenerator, this._canvas, "player.glb", new Vector3(10,30,20)));
+        this._interactObject.push(new InteractObject(this._otherModels["player_animated.glb"], scene, shadowGenerator, this._canvas, new Vector3(10,30,20), 'oggetto1'));
 
         //Create Other Users
-        
         this.socket.on('newPlayer', (remoteSocketId) => {
             this.playersIndex = this.playersIndex + 1;
-            this.otherAssets.push("player.glb");
-            this.users[remoteSocketId] = new NPC(scene, shadowGenerator, this._canvas, remoteSocketId, new Vector3(0,30,10));
+            this.users[remoteSocketId] = new NPC(this._otherModels[remoteSocketId], scene, shadowGenerator, new Vector3(0,30,10), remoteSocketId, camera, this._canvas);
         });
         //Manage Other Users Movement
         this.socket.on("playerMoved", (remoteSocketId, posX, posY, posZ) => {
@@ -321,6 +344,7 @@ class App {
 
         //--GUI--
         const playerUI = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+        playerUI.layer.layerMask = 0x10000000;
 
         //Create first menu container
         var menu1 = new Container('menu1');
@@ -331,19 +355,19 @@ class App {
         playerUI.addControl(menu1);
 
         //Create first menu UI
-        var image = uiElement("menu1img", "/textures/UI/Menu1.png", 1, 1, false);
+        var image = uiElement("menu1img", "/textures/UI/Menu1.png", 1, 1, '');
         menu1.addControl(image);
 
         //Create first button
-        var bot1 = uiElement("bot1", "/textures/UI/Bot1.png", '100px', "120px", true, "20px", "20px", Control.VERTICAL_ALIGNMENT_BOTTOM, Control.HORIZONTAL_ALIGNMENT_LEFT);
+        var bot1 = uiElement("bot1", "/textures/UI/Bot1.png", '100px', "120px", 'menu', "20px", "20px", Control.VERTICAL_ALIGNMENT_BOTTOM, Control.HORIZONTAL_ALIGNMENT_LEFT);
         menu1.addControl(bot1);
 
         //Create second button
-        var bot2 = uiElement("bot2", "/textures/UI/Bot1.png", '60px', "80px", true, "140px", "20px", Control.VERTICAL_ALIGNMENT_BOTTOM, Control.HORIZONTAL_ALIGNMENT_LEFT);
+        var bot2 = uiElement("bot2", "/textures/UI/Bot1.png", '60px', "80px", 'menu', "140px", "20px", Control.VERTICAL_ALIGNMENT_BOTTOM, Control.HORIZONTAL_ALIGNMENT_LEFT);
         menu1.addControl(bot2);
 
         //Create third button
-        var bot3 = uiElement("bot3", "/textures/UI/Bot1.png", '60px', "80px", true, "230px", "20px", Control.VERTICAL_ALIGNMENT_BOTTOM, Control.HORIZONTAL_ALIGNMENT_LEFT);
+        var bot3 = uiElement("bot3", "/textures/UI/Bot1.png", '60px', "80px", 'menu', "230px", "20px", Control.VERTICAL_ALIGNMENT_BOTTOM, Control.HORIZONTAL_ALIGNMENT_LEFT);
         menu1.addControl(bot3);
 
         //Create second menu container
@@ -355,7 +379,7 @@ class App {
         playerUI.addControl(menu2);
 
         //Create second menu UI
-        var image2 = uiElement("menu2img", "/textures/UI/Menu2.png", 1, 1, false);
+        var image2 = uiElement("menu2img", "/textures/UI/Menu2.png", 1, 1, '');
         menu2.addControl(image2);
 
         //check if device is mobile or desktop, and change UI accordingly
@@ -368,8 +392,6 @@ class App {
             menu2.width = 1;
             //menu2.height = menu2.width * 0.25;
             image2.source = "/textures/UI/Menu2mobile.png";
-            console.log(menu2);
-            console.log(image2);
         }
 
         //dont detect any inputs from this ui while the game is loading

@@ -1,11 +1,13 @@
-﻿import { TransformNode, ShadowGenerator, Scene, Mesh, UniversalCamera, ArcRotateCamera, Vector3, Quaternion, Ray, ParticleSystem, ActionManager, ExecuteCodeAction, Texture, Color4, Color3, SphereParticleEmitter } from "@babylonjs/core";
+﻿import { TransformNode, ShadowGenerator, Scene, Mesh, UniversalCamera, ArcRotateCamera, Vector3, Quaternion, Ray, ActionManager, ExecuteCodeAction, AnimationGroup } from "@babylonjs/core";
 import { theFramework } from "./multiplayer";
 
 export class Player extends TransformNode {
     public camera;
+    public dialogueCamera;
     public scene: Scene;
     private _input;
     private _canvas: HTMLCanvasElement;
+    private game;
 
     //Multiplayer
     private socket = theFramework.socket;
@@ -16,6 +18,19 @@ export class Player extends TransformNode {
     //Camera
     private _camRoot: TransformNode;
     private _yTilt: TransformNode;
+
+    //animations
+    private _run: AnimationGroup;
+    private _idle: AnimationGroup;
+    private _jump: AnimationGroup;
+    private _land: AnimationGroup;
+    private _dash: AnimationGroup;
+
+    // animation trackers
+    private _currentAnim: AnimationGroup = null;
+    private _prevAnim: AnimationGroup;
+    private _isFalling: boolean = false;
+    private _jumped: boolean = false;
 
     //const values
     private static readonly PLAYER_SPEED: number = 0.45;
@@ -45,16 +60,6 @@ export class Player extends TransformNode {
     private _grounded: boolean;
     private _jumpCount: number = 1;
 
-    //player variables
-    public lanternsLit: number = 1; //num lanterns lit
-    public totalLanterns: number;
-    public win: boolean = false; //whether the game is won
-
-    //sparkler
-    public sparkler: ParticleSystem; // sparkler particle system
-    public sparkLit: boolean = true;
-    public sparkReset: boolean = false;
-
     constructor(assets, scene: Scene, shadowGenerator: ShadowGenerator, canvas: HTMLCanvasElement, input?) {
         super("player", scene);
         this._canvas = canvas;
@@ -66,7 +71,12 @@ export class Player extends TransformNode {
 
         this.scene.getLightByName("sparklight").parent = this.scene.getTransformNodeByName("Empty");
 
+        this._idle = assets.animationGroups[1];
+        this._run = assets.animationGroups[0];
+
         shadowGenerator.addShadowCaster(assets.mesh); //the player mesh will cast shadows
+
+        this._setUpAnimations(); //Call the function to set up the animations
 
         this._input = input;
 
@@ -84,8 +94,6 @@ export class Player extends TransformNode {
                 }
             )
         );
-
-        this._createSparkles(); //create the sparkler particle system
     }
 
     private _updateFromControls(): void {
@@ -156,6 +164,43 @@ export class Player extends TransformNode {
 
         //Updating position to remote server
         this.socket.emit("playerMoved", this.mesh.position._x, this.mesh.position._y, this.mesh.position._z);
+    }
+
+
+    private _setUpAnimations(): void {
+
+        this.scene.stopAllAnimations();
+        this._run.loopAnimation = true;
+        this._idle.loopAnimation = true;
+
+        //initialize current and previous
+        this._currentAnim = this._idle;
+        this._prevAnim = this._run;
+    }
+
+    private _animatePlayer(): void {
+        if (!this._dashPressed && !this._isFalling && !this._jumped 
+            && (this._input.vertical != 0
+            || this._input.horizontal != 0)) {
+            this._currentAnim = this._run;
+        } else if (this._jumped && !this._isFalling && !this._dashPressed) {
+            //this._currentAnim = this._jump;
+        } else if (!this._isFalling && this._grounded) {
+            this._currentAnim = this._idle;
+            //only notify observer if it's playing
+            /*if(this.scene.getSoundByName("walking").isPlaying){
+                this.onRun.notifyObservers(false);
+            }
+        */} else if (this._isFalling) {
+           // this._currentAnim = this._land;
+        }
+
+        //Animations
+        if(this._currentAnim != null && this._prevAnim !== this._currentAnim){
+            this._prevAnim.stop();
+            this._currentAnim.play(this._currentAnim.loopAnimation);
+            this._prevAnim = this._currentAnim;
+        }
     }
 
     //--GROUND DETECTION--
@@ -259,6 +304,11 @@ export class Player extends TransformNode {
             this._gravity.y = -Player.JUMP_FORCE * 2;
         }
 
+        //cue falling animation once gravity starts pushing down
+        if (this._gravity.y < 0 && this._jumped) { //todo: play a falling anim if not grounded BUT not on a slope
+            this._isFalling = true;
+        }
+
         //update our movement to account for jumping
         this.mesh.moveWithCollisions(this._moveDirection.addInPlace(this._gravity));
 
@@ -274,12 +324,20 @@ export class Player extends TransformNode {
             //reset sequence(needed if we collide with the ground BEFORE actually completing the dash duration)
             this.dashTime = 0;
             this._dashPressed = false;
+
+            //jump & falling animation flags
+            this._jumped = false;
+            this._isFalling = false;
         }
 
         //Jump detection
         if (this._input.jumpKeyDown && this._jumpCount > 0) {
             this._gravity.y = Player.JUMP_FORCE;
             this._jumpCount--;
+
+            //jumping and falling animation flags
+            this._jumped = true;
+            this._isFalling = false;
         }
 
     }
@@ -287,6 +345,7 @@ export class Player extends TransformNode {
     private _beforeRenderUpdate(): void {
         this._updateFromControls();
         this._updateGroundDetection();
+        this._animatePlayer();
     }
 
     public activatePlayerCamera(): UniversalCamera {
@@ -301,7 +360,14 @@ export class Player extends TransformNode {
 
     private _updateCamera(): void {
         let centerPlayer = this.mesh.position.y + 2;
-        this._camRoot.position = Vector3.Lerp(this._camRoot.position, new Vector3(this.mesh.position.x, centerPlayer, this.mesh.position.z), 0.4);
+        if(this.scene.getTransformNodeById('convOpen').isEnabled()){
+            this._camRoot.position = Vector3.Lerp(this._camRoot.position, new Vector3(this.mesh.position.x, centerPlayer, this.mesh.position.z), 0.4);
+        }
+        if(this.camera.radius < 1) {
+            this.mesh.setEnabled(false);
+        } else {
+            this.mesh.setEnabled(true);
+        }
     }
 
     private _setupPlayerCamera() {
@@ -318,8 +384,8 @@ export class Player extends TransformNode {
         this._yTilt = yTilt;
         yTilt.parent = this._camRoot;
 
-        //our actual camera that's pointing at our root's position
-        this.camera = new ArcRotateCamera("cam", Math.PI * 1.5, Math.PI / 2, 20, this._camRoot.position, this.scene);
+        //our default camera that's pointing at our root's position
+        this.camera = new ArcRotateCamera("cam", Math.PI * 1.5, Math.PI / 2, 10, this._camRoot.position, this.scene);
         this.camera.attachControl(this._canvas, true);
 
         //Set camera limits
@@ -330,60 +396,31 @@ export class Player extends TransformNode {
         this.camera.lowerAlphaLimit = Math.PI * 1.5;
         this.camera.upperAlphaLimit = Math.PI * 1.5;
 
-        //Apply Collisions -- NON WORKING --
+        //Apply Collisions -- THE COLLISION CHECK WORKS BUT IT DOESN'T STOP THE CAMERA --
         this.camera.applyGravity = true;
         this.camera.ellipsoid = new Vector3(1, 1, 1);
         this.camera.checkCollisions = true;
 
         //Effect on collide
         this.camera.onCollide = function (collidedMesh) {
-            console.log(collidedMesh);
+            //console.log(collidedMesh);
         }
         
         this.camera.inputs.remove(this.camera.inputs.attached.keyboard); //Remove keyboard controls 
-        this.camera.fov = 0.8; //Change fov 
         this.camera.parent = yTilt; //Parent to yTilt
 
-        this.scene.activeCamera = this.camera;
+        var bgCamera = new ArcRotateCamera("bgCam", Math.PI * 1.5, Math.PI / 2, 10, this._camRoot.position, this.scene);
+        bgCamera.layerMask = 0x10000000;
+        //Set camera limits
+        bgCamera.lowerRadiusLimit = 0;
+        bgCamera.upperRadiusLimit = 100;
+        bgCamera.lowerBetaLimit = Math.PI / 4;
+        bgCamera.upperBetaLimit = Math.PI / 1.5;
+        bgCamera.lowerAlphaLimit = Math.PI * 1.5;
+        bgCamera.upperAlphaLimit = Math.PI * 1.5;
+        bgCamera.parent = yTilt; //Parent to yTilt
+
+        this.scene.activeCameras = [this.camera, bgCamera];
         return this.camera;
-    }
-
-    private _createSparkles(): void {
-
-        const sphere = Mesh.CreateSphere("sparkles", 4, 1, this.scene);
-        sphere.position = new Vector3(0, 0, 0);
-        sphere.parent = this.scene.getTransformNodeByName("Empty"); // place particle system at the tip of the sparkler on the player mesh
-        sphere.isVisible = false;
-
-        let particleSystem = new ParticleSystem("sparkles", 1000, this.scene);
-        particleSystem.particleTexture = new Texture("textures/flwr.png", this.scene);
-        particleSystem.emitter = sphere;
-        particleSystem.particleEmitterType = new SphereParticleEmitter(0);
-
-        particleSystem.updateSpeed = 0.014;
-        particleSystem.minAngularSpeed = 0;
-        particleSystem.maxAngularSpeed = 360;
-        particleSystem.minEmitPower = 1;
-        particleSystem.maxEmitPower = 3;
-
-        particleSystem.minSize = 0.5;
-        particleSystem.maxSize = 2;
-        particleSystem.minScaleX = 0.5;
-        particleSystem.minScaleY = 0.5;
-        particleSystem.color1 = new Color4(0.8, 0.8549019607843137, 1, 1);
-        particleSystem.color2 = new Color4(0.8509803921568627, 0.7647058823529411, 1, 1);
-
-        particleSystem.addRampGradient(0, Color3.White());
-        particleSystem.addRampGradient(1, Color3.Black());
-        particleSystem.getRampGradients()[0].color = Color3.FromHexString("#BBC1FF");
-        particleSystem.getRampGradients()[1].color = Color3.FromHexString("#FFFFFF");
-        particleSystem.maxAngularSpeed = 0;
-        particleSystem.maxInitialRotation = 360;
-        particleSystem.minAngularSpeed = -10;
-        particleSystem.maxAngularSpeed = 10;
-
-        particleSystem.start();
-
-        this.sparkler = particleSystem;
     }
 }

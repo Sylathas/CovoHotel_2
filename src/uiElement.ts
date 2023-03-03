@@ -1,6 +1,6 @@
-import { AdvancedDynamicTexture, Button, Control, Image } from "@babylonjs/gui";
+import { Control, Image } from "@babylonjs/gui";
 
-export function uiElement (name, imgUrl, width, height, button: boolean, left?: string, paddingBottom?: string, alignmentVert?: number, alignmentHor?: number){
+export function uiElement (name, imgUrl, width, height, button: string, left?: string, paddingBottom?: string, alignmentVert?: number, alignmentHor?: number){
     var element = new Image(name, imgUrl);
     element.width = width;
     element.height = height;
@@ -9,10 +9,9 @@ export function uiElement (name, imgUrl, width, height, button: boolean, left?: 
     element.verticalAlignment = alignmentVert || 2;
     element.horizontalAlignment = alignmentHor || Control.HORIZONTAL_ALIGNMENT_LEFT;
 
-    if(button) {
+    if(button == 'menu') {
         element.isPointerBlocker = true;
         element.onPointerDownObservable.add(function () {
-            console.log('ciao1');
             element.scaleX = .9;
             element.scaleY = .9;
         });
