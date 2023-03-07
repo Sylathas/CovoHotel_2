@@ -460,7 +460,7 @@ class App {
         });
 
         //Manage Sounds
-        const music = new Sound("music", "/sounds/farnemolti.wav", scene, null,
+        const music = new Sound("music", "/sounds/kobra.mp3", scene, null,
           {
             autoplay: true, 
             loop: true,
