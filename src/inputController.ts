@@ -42,10 +42,14 @@ export class PlayerInput {
         //add to the scene an observable that calls updateFromKeyboard or updateFromController and update before rendering
         scene.onBeforeRenderObservable.add(() => {
             if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-                this._updateFromController(scene);
+                if(scene.getTransformNodeById('convOpen').isEnabled()){
+                    this._updateFromController(scene);
+                }
 
             } else {
-                this._updateFromKeyboard(scene);
+                if(scene.getTransformNodeById('convOpen').isEnabled()){
+                    this._updateFromKeyboard(scene);
+                }
             }
         });
     }

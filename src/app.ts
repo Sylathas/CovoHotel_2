@@ -2,8 +2,8 @@
 import "@babylonjs/inspector";
 import "@babylonjs/loaders/glTF";
 
-import { Engine, Scene, Vector3, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, CubeTexture, Texture, PointerEventTypes, Ray, Animation, PickingInfo, Sound} from "@babylonjs/core";
-import { AdvancedDynamicTexture, Button, Control, Image, Container } from "@babylonjs/gui";
+import { Engine, Scene, Vector3, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, HDRCubeTexture, Texture, PointerEventTypes, Ray, Animation, PickingInfo, AnimationGroup, TransformNode, Sound } from "@babylonjs/core";
+import { AdvancedDynamicTexture, Button, Control, Container } from "@babylonjs/gui";
 import { Environment } from "./environment";
 import { Player } from "./characterController";
 import { PlayerInput } from "./inputController";
@@ -15,7 +15,15 @@ import { io, Socket } from "socket.io-client";
 
 enum State { START = 0, GAME = 1, LOSE = 2, CUTSCENE = 3 }
 
+//Dictionary Types
+type NPCAssets = {
+   mesh: Mesh;
+   animationGroups: AnimationGroup;
+   name: string;
+}
+
 class App {
+
     //General Entire Application
     private _scene: Scene;
     private _canvas: HTMLCanvasElement;
@@ -23,15 +31,16 @@ class App {
 
     //Game State Related
     public assets;
-    public otherAssets = [];
+    public otherAssets : { [name: string]: NPCAssets } = {};
     private _input: PlayerInput;
     private _environment;
     private _player: Player;
     private _npc: NPC[] = [];
     private _interactObject: InteractObject[] = [];
-    private _environmentTexture: string = "textures/envtext.env"; //environment texture for HDRI and skybox
-    private _playerModel: string = "player.glb"; //mesh of the player
-    private _otherModels: string[] = ['player.glb']; //mesh of npcs and interactive objects
+    private _environmentTexture: string = "textures/env.hdr"; //environment texture for HDRI and skybox
+    private _playerModel: string = "player_animated.glb"; //mesh of the player
+    private _otherModels: string[] = ["player_animated.glb"]; //mesh of npcs and interactive objects
+    public _convOpen: boolean = false;
 
     //Scene - related
     private _state: number = 0;
@@ -224,6 +233,7 @@ class App {
 
             return SceneLoader.ImportMeshAsync(null, "./models/", playerModel, scene).then((result) => {
                 const root = result.meshes[0];
+                root.isPickable = false;
                 //body is our actual player mesh
                 const body = root;
                 body.parent = outer;
@@ -234,6 +244,7 @@ class App {
 
                 return {
                     mesh: outer as Mesh,
+                    animationGroups: result.animationGroups
                 }
             });
         }
@@ -244,7 +255,8 @@ class App {
     }
 
     private async _loadOtherAssets(scene, otherModels) {
-        otherModels.forEach((model) => {
+
+        async function loadOtherModels(model) {
             return SceneLoader.ImportMeshAsync(null, "./models/", model, scene).then((result) => {
                 //click event mesh
                 const outer = MeshBuilder.CreateBox(model, { width: 2, depth: 1, height: 3 }, scene);
@@ -261,16 +273,26 @@ class App {
                 body.isPickable = false; //the click trigger is the outer mesh, not the player
                 body.getChildMeshes().forEach(m => {
                     m.isPickable = false;
-                })
+                });
 
-                this.otherAssets.push(outer);
+                return {
+                    mesh: outer as Mesh,
+                    animationGroups: result.animationGroups,
+                    name: model
+                }
+            });
+        }
+
+        otherModels.forEach((model) => {
+            return loadOtherModels(model).then(assets => {
+                otherModels[assets.name] = { mesh: assets.mesh, animationGroups: assets.animationGroups, name: assets.name}
             });
         });
     }
 
     private async _initializeGameAsync(scene): Promise<void> {
-        scene.ambientColor = new Color3(0.34509803921568627, 0.5568627450980392, 0.8352941176470589);
-        scene.clearColor = new Color4(0.01568627450980392, 0.01568627450980392, 0.20392156862745098);
+        scene.ambientColor = new Color3(0, 0, 0);
+        scene.clearColor = new Color4(0, 0, 0);
 
         const light = new PointLight("sparklight", new Vector3(0, 0, 0), scene);
         light.diffuse = new Color3(0.08627450980392157, 0.10980392156862745, 0.15294117647058825);
@@ -280,15 +302,19 @@ class App {
         this.shadowGenerator = new ShadowGenerator(1024, light);
         this.shadowGenerator.darkness = 0.4;
 
+        //Create a Node that is used to check for the convOpen
+        new TransformNode('convOpen', scene);
+
         //Create the player
         this._player = new Player(this.assets, scene, this.shadowGenerator, this._canvas, this._input);
         const camera = this._player.activatePlayerCamera();
 
         //Create NPC
-        this._npc.push(new NPC(scene, this.shadowGenerator, this._canvas, "player.glb", new Vector3(0,30,20)));
-        this._npc.push(new NPC(scene, this.shadowGenerator, this._canvas, "player.glb", new Vector3(0,40,20)));
+        console.log(this._otherModels);
+        this._npc.push(new NPC(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(10,2,10), 'npc1', camera, this._canvas));
+        this._npc.push(new NPC(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(10,2,20), 'npc2', camera, this._canvas));
 
-        this._interactObject.push(new InteractObject(scene, this.shadowGenerator, this._canvas, "player.glb", new Vector3(10,30,20)));
+        this._interactObject.push(new InteractObject(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(10,2,20), 'npc2'));
 
         //glow layer
         const gl = new GlowLayer("glow", scene);
@@ -304,6 +330,7 @@ class App {
 
         //--GUI--
         const playerUI = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+        playerUI.layer.layerMask = 0x10000000;
 
         //Create first menu container
         var menu1 = new Container('menu1');
@@ -314,19 +341,19 @@ class App {
         playerUI.addControl(menu1);
 
         //Create first menu UI
-        var image = uiElement("menu1img", "/textures/UI/Menu1.png", 1, 1, false);
+        var image = uiElement("menu1img", "/textures/UI/Menu1.png", 1, 1, '');
         menu1.addControl(image);
 
         //Create first button
-        var bot1 = uiElement("bot1", "/textures/UI/Bot1.png", '100px', "120px", true, "20px", "20px", Control.VERTICAL_ALIGNMENT_BOTTOM, Control.HORIZONTAL_ALIGNMENT_LEFT);
+        var bot1 = uiElement("bot1", "/textures/UI/Bot1.png", '100px', "120px", 'menu', "20px", "20px", Control.VERTICAL_ALIGNMENT_BOTTOM, Control.HORIZONTAL_ALIGNMENT_LEFT);
         menu1.addControl(bot1);
 
         //Create second button
-        var bot2 = uiElement("bot2", "/textures/UI/Bot1.png", '60px', "80px", true, "140px", "20px", Control.VERTICAL_ALIGNMENT_BOTTOM, Control.HORIZONTAL_ALIGNMENT_LEFT);
+        var bot2 = uiElement("bot2", "/textures/UI/Bot1.png", '60px', "80px", 'menu', "140px", "20px", Control.VERTICAL_ALIGNMENT_BOTTOM, Control.HORIZONTAL_ALIGNMENT_LEFT);
         menu1.addControl(bot2);
 
         //Create third button
-        var bot3 = uiElement("bot3", "/textures/UI/Bot1.png", '60px', "80px", true, "230px", "20px", Control.VERTICAL_ALIGNMENT_BOTTOM, Control.HORIZONTAL_ALIGNMENT_LEFT);
+        var bot3 = uiElement("bot3", "/textures/UI/Bot1.png", '60px', "80px", 'menu', "230px", "20px", Control.VERTICAL_ALIGNMENT_BOTTOM, Control.HORIZONTAL_ALIGNMENT_LEFT);
         menu1.addControl(bot3);
 
         //Create second menu container
@@ -338,7 +365,7 @@ class App {
         playerUI.addControl(menu2);
 
         //Create second menu UI
-        var image2 = uiElement("menu2img", "/textures/UI/Menu2.png", 1, 1, false);
+        var image2 = uiElement("menu2img", "/textures/UI/Menu2.png", 1, 1, '');
         menu2.addControl(image2);
 
         //check if device is mobile or desktop, and change UI accordingly
@@ -351,29 +378,17 @@ class App {
             menu2.width = 1;
             //menu2.height = menu2.width * 0.25;
             image2.source = "/textures/UI/Menu2mobile.png";
-            console.log(menu2);
-            console.log(image2);
         }
 
         //dont detect any inputs from this ui while the game is loading
         scene.detachControl();
 
         //IBL (image based lighting) - to give scene an ambient light
-        const envHdri = CubeTexture.CreateFromPrefilteredData(this._environmentTexture, scene);
+        const envHdri = new HDRCubeTexture(this._environmentTexture, scene, 512);
         envHdri.name = "env";
         envHdri.gammaSpace = false;
         scene.environmentTexture = envHdri;
-        scene.environmentIntensity = 0.04;
-
-        //Create skybox
-        const skybox = MeshBuilder.CreateBox("skyBox", { size: 1000.0 }, scene);
-        const skyboxMaterial = new StandardMaterial("skyBox", scene);
-        skyboxMaterial.backFaceCulling = false;
-        skyboxMaterial.reflectionTexture = CubeTexture.CreateFromPrefilteredData(this._environmentTexture, scene);
-        skyboxMaterial.reflectionTexture.coordinatesMode = Texture.SKYBOX_MODE;
-        skyboxMaterial.diffuseColor = new Color3(0, 0, 0);
-        skyboxMaterial.specularColor = new Color3(0, 0, 0);
-        skybox.material = skyboxMaterial;
+        scene.environmentIntensity = 0.01;
 
         //--INPUT--
         this._input = new PlayerInput(scene, this._canvas); //detect keyboard/mobile inputs
@@ -396,6 +411,11 @@ class App {
         //Add fade animation to all the meshes in the scene
         this._scene.meshes.forEach(mesh => {
             mesh.animations.push(this._fadeAnimation);
+            this._npc.forEach(npc => {
+                if(mesh.name === npc.name){
+                    mesh.animations.pop();
+                }
+            });
         });
 
         let lastMousePos = this._scene.pointerX;
@@ -410,7 +430,7 @@ class App {
                     this._mouseDown = false;
                     break;
                 case PointerEventTypes.POINTERMOVE:
-                    if (this._mouseDown) {
+                    if (this._mouseDown && this._scene.getTransformNodeById('convOpen').isEnabled()) {
                         this._scene.cameras[0]._cache.parent.rotation.y += (this._scene.pointerX - lastMousePos) / 100;
                     }
                     lastMousePos = this._scene.pointerX;
@@ -440,15 +460,14 @@ class App {
         this.socket.on('newPlayer', (remoteSocketId) => {
             console.log("A new player joined with id: " + remoteSocketId);
             this.playersIndex = this.playersIndex + 1;
-            this.otherAssets.push("player.glb");
-            this.users[remoteSocketId] = new NPC(scene, this.shadowGenerator, this._canvas, "player.glb", new Vector3(this._scene.getMeshByName('outer').position.x, this._scene.getMeshByName('outer').position.y + 0.5, this._scene.getMeshByName('outer').position.z));
+            this.users[remoteSocketId] = new NPC(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(this._scene.getMeshByName('outer').position.x, this._scene.getMeshByName('outer').position.y + 0.5, this._scene.getMeshByName('outer').position.z), "player.glb", this._scene.cameras[0], this._canvas);
             console.log(this.users);
         });
         
         //Manage Other Users Movement
         this.socket.on('playerMoved', (remoteSocketId, posX, posY, posZ) => {
             if (this.users[remoteSocketId] == null) {
-                this.users[remoteSocketId] = new NPC(scene, this.shadowGenerator, this._canvas, "player.glb", new Vector3(posX, posY, posZ));
+                this.users[remoteSocketId] = new NPC(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(posX, posY, posZ), "player.glb", this._scene.cameras[0], this._canvas);
             } else { this.users[remoteSocketId].mesh.position = new Vector3(posX, posY, posZ);}
         });
 
