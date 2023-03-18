@@ -20,6 +20,5 @@ export function uiElement (name, imgUrl, width, height, button: string, left?: s
             element.scaleY = 1;
         });
     }
-
     return element;
 }

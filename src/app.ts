@@ -13,7 +13,7 @@ import { theFramework } from "./multiplayer"
 import { uiElement } from "./uiElement";
 import { io, Socket } from "socket.io-client";
 
-enum State { START = 0, GAME = 1, LOSE = 2, CUTSCENE = 3 }
+enum State { START = 0, GAME = 1, LOSE = 2, DREAM = 3 }
 
 //Dictionary Types
 type NPCAssets = {
@@ -139,7 +139,7 @@ class App {
                 case State.START:
                     this._scene.render();
                     break;
-                case State.CUTSCENE:
+                case State.DREAM:
                     this._scene.render();
                     break;
                 case State.GAME:
@@ -206,7 +206,7 @@ class App {
         this._gamescene = scene;
 
         //--CREATE ENVIRONMENT--
-        const environment = new Environment(scene);
+        const environment = new Environment(scene, "Layout.glb");
         this._environment = environment;
         await this._environment.load(); //environment
         await this._loadCharacterAssets(scene, this._playerModel);
@@ -309,7 +309,7 @@ class App {
         this._player = new Player(this.assets, scene, this.shadowGenerator, this._canvas, this._input);
         const camera = this._player.activatePlayerCamera();
 
-        //Create NPC
+        //Create NPCs
         console.log(this._otherModels);
         this._npc.push(new NPC(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(10,2,10), 'npc1', camera, this._canvas));
         this._npc.push(new NPC(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(10,2,20), 'npc2', camera, this._canvas));
@@ -349,12 +349,18 @@ class App {
         menu1.addControl(bot1);
 
         //Create second button
-        var bot2 = uiElement("bot2", "/textures/UI/Bot1.png", '60px', "80px", 'menu', "140px", "20px", Control.VERTICAL_ALIGNMENT_BOTTOM, Control.HORIZONTAL_ALIGNMENT_LEFT);
+        var bot2 = uiElement("bot2", "/textures/UI/Bot2.png", '60px', "80px", 'menu', "140px", "20px", Control.VERTICAL_ALIGNMENT_BOTTOM, Control.HORIZONTAL_ALIGNMENT_LEFT);
         menu1.addControl(bot2);
 
         //Create third button
-        var bot3 = uiElement("bot3", "/textures/UI/Bot1.png", '60px', "80px", 'menu', "230px", "20px", Control.VERTICAL_ALIGNMENT_BOTTOM, Control.HORIZONTAL_ALIGNMENT_LEFT);
+        var bot3 = uiElement("bot3", "/textures/UI/Bot3.png", '60px', "80px", 'menu', "230px", "20px", Control.VERTICAL_ALIGNMENT_BOTTOM, Control.HORIZONTAL_ALIGNMENT_LEFT);
         menu1.addControl(bot3);
+
+        //Add interactions for buttons
+        bot1.onPointerDownObservable.add(function () {
+            bot1.scaleX = .9;
+            bot1.scaleY = .9;
+        });
 
         //Create second menu container
         var menu2 = new Container('menu2');
@@ -487,6 +493,175 @@ class App {
           });
     }
 
+    private async _setUpDream() {
+        let scene = new Scene(this._engine);
+        this._gamescene = scene;
+
+        //--CREATE ENVIRONMENT--
+        const environment = new Environment(scene, "Dream.gltf");
+        this._environment = environment;
+        await this._environment.load(); //environment
+        await this._loadCharacterAssets(scene, this._playerModel);
+    }
+
+    private async _initializeDreamAsync(scene): Promise<void> {
+        scene.ambientColor = new Color3(0, 0, 0);
+        scene.clearColor = new Color4(0, 0, 0);
+
+        const light = new PointLight("sparklight", new Vector3(0, 0, 0), scene);
+        light.diffuse = new Color3(0.08627450980392157, 0.10980392156862745, 0.15294117647058825);
+        light.intensity = 35;
+        light.radius = 1;
+
+        this.shadowGenerator = new ShadowGenerator(1024, light);
+        this.shadowGenerator.darkness = 0.4;
+
+        //Create the player
+        this._player = new Player(this.assets, scene, this.shadowGenerator, this._canvas, this._input);
+        const camera = this._player.activatePlayerCamera();
+
+        //glow layer
+        const gl = new GlowLayer("glow", scene);
+        gl.intensity = 0.4;
+        //webpack served from public
+    }
+
+    private async _goToDream() {
+        //--SETUP SCENE--
+        this._scene.detachControl();
+        let scene = this._gamescene;
+        scene.clearColor = new Color4(0.01568627450980392, 0.01568627450980392, 0.20392156862745098); // a color that fit the overall color scheme better
+
+        //--GUI--
+        const playerUI = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+        playerUI.layer.layerMask = 0x10000000;
+
+        //Create first menu container
+        var menu1 = new Container('menu1');
+        menu1.width = "500px";
+        menu1.height = "250px";
+        menu1.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+        menu1.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+        playerUI.addControl(menu1);
+
+        //Create first menu UI
+        var image = uiElement("menu1img", "/textures/UI/Menu1.png", 1, 1, '');
+        menu1.addControl(image);
+
+        //Create first button
+        var bot1 = uiElement("bot1", "/textures/UI/Bot1.png", '100px', "120px", 'menu', "20px", "20px", Control.VERTICAL_ALIGNMENT_BOTTOM, Control.HORIZONTAL_ALIGNMENT_LEFT);
+        menu1.addControl(bot1);
+
+        //Create second button
+        var bot2 = uiElement("bot2", "/textures/UI/Bot2.png", '60px', "80px", 'menu', "140px", "20px", Control.VERTICAL_ALIGNMENT_BOTTOM, Control.HORIZONTAL_ALIGNMENT_LEFT);
+        menu1.addControl(bot2);
+
+        //Create third button
+        var bot3 = uiElement("bot3", "/textures/UI/Bot3.png", '60px', "80px", 'menu', "230px", "20px", Control.VERTICAL_ALIGNMENT_BOTTOM, Control.HORIZONTAL_ALIGNMENT_LEFT);
+        menu1.addControl(bot3);
+
+        //Add interactions for buttons
+        bot1.onPointerDownObservable.add(function () {
+            bot1.scaleX = .9;
+            bot1.scaleY = .9;
+        });
+
+        //Create second menu container
+        var menu2 = new Container('menu2');
+        menu2.width = "350px";
+        menu2.height = "125px";
+        menu2.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+        menu2.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+        playerUI.addControl(menu2);
+
+        //Create second menu UI
+        var image2 = uiElement("menu2img", "/textures/UI/Menu2.png", 1, 1, '');
+        menu2.addControl(image2);
+
+        //check if device is mobile or desktop, and change UI accordingly
+        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+            menu1.rotation = Math.PI;
+            menu1.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+            menu1.width = 1;
+            //menu1.height = menu1.width * .6;
+
+            menu2.width = 1;
+            //menu2.height = menu2.width * 0.25;
+            image2.source = "/textures/UI/Menu2mobile.png";
+        }
+
+        //dont detect any inputs from this ui while the game is loading
+        scene.detachControl();
+
+        //IBL (image based lighting) - to give scene an ambient light
+        const envHdri = new HDRCubeTexture(this._environmentTexture, scene, 512);
+        envHdri.name = "env";
+        envHdri.gammaSpace = false;
+        scene.environmentTexture = envHdri;
+        scene.environmentIntensity = 0.01;
+
+        //--INPUT--
+        this._input = new PlayerInput(scene, this._canvas); //detect keyboard/mobile inputs
+
+        //primitive character and setting
+        await this._initializeGameAsync(scene);
+
+        //--WHEN SCENE FINISHED LOADING--
+        await scene.whenReadyAsync();
+        scene.getMeshByName("outer").position = scene.getTransformNodeByName("startPosition").getAbsolutePosition(); //move the player to the start position
+        //get rid of start scene, switch to gamescene and change states
+        this._scene.dispose();
+        this._state = State.DREAM;
+        this._scene = scene;
+        this._scene.gravity = new Vector3(0, -0.15, 0);
+        this._engine.hideLoadingUI();
+        //the game is ready, attach control back
+        this._scene.attachControl();
+
+        //Add fade animation to all the meshes in the scene
+        this._scene.meshes.forEach(mesh => {
+            mesh.animations.push(this._fadeAnimation);
+            this._npc.forEach(npc => {
+                if(mesh.name === npc.name){
+                    mesh.animations.pop();
+                }
+            });
+        });
+
+        let lastMousePos = this._scene.pointerX;
+
+        //Update the state of the mouseDown variable and lastMousePos depending on the mouse action and position
+        this._scene.onPointerObservable.add((pointerInfo) => {
+            switch (pointerInfo.type) {
+                case PointerEventTypes.POINTERDOWN:
+                    this._mouseDown = true;
+                    break;
+                case PointerEventTypes.POINTERUP:
+                    this._mouseDown = false;
+                    break;
+                case PointerEventTypes.POINTERMOVE:
+                    if (this._mouseDown && this._scene.getTransformNodeById('convOpen').isEnabled()) {
+                        this._scene.cameras[0]._cache.parent.rotation.y += (this._scene.pointerX - lastMousePos) / 100;
+                    }
+                    lastMousePos = this._scene.pointerX;
+                    break;
+            }
+        });
+
+        this._scene.registerBeforeRender(() => {
+            // Make meshes between player and camera turn transparent
+            this._checkFrontCamera();
+        });
+
+        //Manage Sounds
+        const music = new Sound("music", "/sounds/farnemolti.wav", scene, null,
+          {
+            autoplay: true, 
+            loop: true,
+            spatialSound: true,
+          });
+    }
+
     //Check if something is between the camera and the player
     private _checkFrontCamera() {
 
@@ -520,4 +695,5 @@ class App {
         this._hits = hits;
     }
 }
+
 new App();

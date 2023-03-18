@@ -6,10 +6,11 @@ export class Environment {
     private _scene: Scene;
 
     //Meshes
-    public environmentModel: string = "Layout.glb"; //mesh of the map
+    public environmentModel: string; //mesh of the map
 
-    constructor(scene: Scene) {
+    constructor(scene: Scene, environment: string) {
         this._scene = scene;
+        this.environmentModel = environment;
     }
 
     //What we do once the environment assets have been imported
