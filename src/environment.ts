@@ -1,4 +1,4 @@
-﻿import { Scene, Mesh, Vector3, SceneLoader, TransformNode, PBRMetallicRoughnessMaterial, ExecuteCodeAction, ActionManager, Texture, Color3 } from "@babylonjs/core";
+﻿import { Scene, AbstractMesh, SceneLoader } from "@babylonjs/core";
 import { Lantern } from "./lantern";
 import { Player } from "./characterController";
 
@@ -19,13 +19,19 @@ export class Environment {
         const assets = await this._loadAsset();
         //Loop through all environment meshes that were imported
         assets.allMeshes.forEach((m) => {
+
+            m.cullingStrategy = AbstractMesh.CULLINGSTRATEGY_BOUNDINGSPHERE_ONLY;
+            m.freezeWorldMatrix();
+
             if (m.name == "ground") {
                 //dont check for collisions, dont allow for raycasting to detect it(cant land on it)
                 m.checkCollisions = false;
                 m.isPickable = false;
+                m.doNotSyncBoundingInfo = true;
+
             }
             //areas that will use box collisions
-            if (m.name.includes("stairs") || m.name == "cityentranceground" || m.name == "fishingground.001" || m.name.includes("lilyflwr")) {
+            if (m.name.includes("stairs")) {
                 m.checkCollisions = false;
                 m.isPickable = false;
             }
@@ -36,11 +42,21 @@ export class Environment {
                 m.checkCollisions = true;
             }
             //trigger meshes 
-            if (m.name.includes("Trigger")) {
+            if (m.name.includes("Dream")) {
                 m.isVisible = false;
                 m.isPickable = false;
                 m.checkCollisions = false;
             }
+
+            //ground mesh
+            if (m.name.includes("Terrain")) {
+                m.receiveShadows = true;
+                m.isPickable = false;
+            }
+
+            m.material.freeze()
+            m.freezeWorldMatrix();
+
         });
     }
 

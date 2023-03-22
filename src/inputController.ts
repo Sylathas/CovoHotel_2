@@ -23,6 +23,7 @@ export class PlayerInput {
     constructor(scene: Scene, canvas: HTMLCanvasElement) {
         //scene action manager to detect inputs
         scene.actionManager = new ActionManager(scene);
+        console.log(scene);
 
         this._canvas = canvas;
 
@@ -41,14 +42,16 @@ export class PlayerInput {
 
         //add to the scene an observable that calls updateFromKeyboard or updateFromController and update before rendering
         scene.onBeforeRenderObservable.add(() => {
-            if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-                if(scene.getTransformNodeById('convOpen').isEnabled()){
-                    this._updateFromController(scene);
-                }
-
-            } else {
-                if(scene.getTransformNodeById('convOpen').isEnabled()){
-                    this._updateFromKeyboard(scene);
+            if(scene.getTransformNodeById('convOpen')) {
+                if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                    if(scene.getTransformNodeById('convOpen').isEnabled()){
+                        this._updateFromController(scene);
+                    }
+    
+                } else {
+                    if(scene.getTransformNodeById('convOpen').isEnabled()){
+                        this._updateFromKeyboard(scene);
+                    }
                 }
             }
         });
@@ -102,8 +105,7 @@ export class PlayerInput {
         } else if (this.inputMap["e"] || this.inputMap["E"]) {
             this.horizontal = Scalar.Lerp(this.horizontal, 1, 0.2);
             this._rotateCamera(scene);
-        }
-        else {
+        } else {
             this.horizontal = 0;
             this.horizontalAxis = 0;
         }

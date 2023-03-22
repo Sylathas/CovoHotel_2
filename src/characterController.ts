@@ -411,6 +411,6 @@ export class Player extends TransformNode {
         this.camera.inputs.remove(this.camera.inputs.attached.keyboard); //Remove keyboard controls 
         this.camera.parent = yTilt; //Parent to yTilt
 
-≈        return this.camera;
+        return this.camera;
     }
 }

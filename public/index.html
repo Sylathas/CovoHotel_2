@@ -3,7 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <title>BARS by Covo</title>
+    <style>
+        #UI {
+            position: absolute;
+            margin: 0;
+            pointer-events: none;
+            width: 100%;
+            height: 100%;
+            display: none;
+        }
+
+        #buttons {
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 500px;
+            height: 250px;
+            background-image: url('./textures/UI/Menu1.png');
+            background-size: cover;
+            pointer-events: all;
+        }
+
+        .UIButton {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            bottom: 15px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            cursor: pointer;
+            transition: .5s;
+        }
+
+        .UIButton:hover {
+            transform: scale(1.1);
+        }
+
+        #dance {
+            background-image: url('./textures/UI/Bot1.png');
+            left: 20px;
+            width: 90px;
+            height: 90px;
+        }
+
+        #settings {
+            background-image: url('./textures/UI/Bot2.png');
+            left: 140px;
+        }
+
+        #covo {
+            background-image: url('./textures/UI/Bot3.png');
+            left: 235px;
+        }
+    </style>
 </head>
 <body>
+    <div id="UI">
+        <div id="buttons">
+            <div id="dance" class="UIButton"></div>
+            <div id="settings" class="UIButton"></div>
+            <div id="covo" class="UIButton"></div>
+        </div>
+    </div>
 </body>
 </html>

@@ -2,7 +2,7 @@
 import "@babylonjs/inspector";
 import "@babylonjs/loaders/glTF";
 
-import { Engine, Scene, Vector3, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, HDRCubeTexture, Texture, PointerEventTypes, Ray, Animation, PickingInfo, AnimationGroup, TransformNode, Sound } from "@babylonjs/core";
+import { Engine, Scene, Vector3, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, HDRCubeTexture, Texture, PointerEventTypes, Ray, Animation, PickingInfo, AnimationGroup, TransformNode, Sound, SceneOptimizerOptions, HardwareScalingOptimization, SceneOptimizer, LensFlaresOptimization, TextureOptimization, DirectionalLight} from "@babylonjs/core";
 import { AdvancedDynamicTexture, Button, Control, Container } from "@babylonjs/gui";
 import { Environment } from "./environment";
 import { Player } from "./characterController";
@@ -10,10 +10,9 @@ import { PlayerInput } from "./inputController";
 import { NPC } from "./NPC";
 import { InteractObject } from "./interactObject";
 import { theFramework } from "./multiplayer"
-import { uiElement } from "./uiElement";
 import { io, Socket } from "socket.io-client";
 
-enum State { START = 0, GAME = 1, LOSE = 2, DREAM = 3 }
+enum State { START = 0, GAME = 1, LOADING = 2, DREAM = 3 }
 
 //Dictionary Types
 type NPCAssets = {
@@ -41,14 +40,24 @@ class App {
     private _playerModel: string = "player_animated.glb"; //mesh of the player
     private _otherModels: string[] = ["player_animated.glb"]; //mesh of npcs and interactive objects
     public _convOpen: boolean = false;
+    private _goGame: boolean = false;
+
+    //Dream State Related
+    private _dreamInput: PlayerInput;
+    private _dreamEnvironment;
+    private _dreamPlayer: Player;
+    private _dreamEnvironmentTexture: string = "textures/sky.hdr"; //environment texture for HDRI and skybox
+    private _goDream: boolean;
 
     //Scene - related
     private _state: number = 0;
     private _gamescene: Scene;
+    private _dreamscene: Scene;
     private _cutScene: Scene;
 
     //Camera related
     private shadowGenerator;
+    private dreamShadowGenerator;
     private _mouseDown: boolean = false;
 
     //Camera Raycasting
@@ -60,8 +69,10 @@ class App {
     private users = {};
     private playersIndex = 3;
 
-    //Tools for syncronizing
-    private deltaTime: number;
+    //Tools for optimizing
+    private _optimizer: SceneOptimizer;
+    private isOptimized: boolean = false;
+    private _optimizationLevel: number = 0;
 
     constructor() {
         this._canvas = this._createCanvas();
@@ -145,7 +156,7 @@ class App {
                 case State.GAME:
                     this._scene.render();
                     break;
-                case State.LOSE:
+                case State.LOADING:
                     this._scene.render();
                     break;
                 default: break;
@@ -211,6 +222,362 @@ class App {
         await this._environment.load(); //environment
         await this._loadCharacterAssets(scene, this._playerModel);
         await this._loadOtherAssets(scene, this._otherModels);
+    }
+
+    private async _initializeGameAsync(scene): Promise<void> {
+        scene.ambientColor = new Color3(0, 0, 0);
+        scene.clearColor = new Color4(0, 0, 0);
+
+        const light = new PointLight("sparklight", new Vector3(0, 0, 0), scene);
+        light.diffuse = new Color3(0.08627450980392157, 0.10980392156862745, 0.15294117647058825);
+        light.intensity = 35;
+        light.radius = 1;
+
+        this.shadowGenerator = new ShadowGenerator(1024, light);
+        this.shadowGenerator.darkness = 0.4;
+
+        //Create a Node that is used to check for the convOpen
+        new TransformNode('convOpen', scene);
+
+        //Create the player
+        this._player = new Player(this.assets, scene, this.shadowGenerator, this._canvas, this._input);
+        const camera = this._player.activatePlayerCamera();
+
+        //Create NPCs
+        console.log(this._otherModels);
+        this._npc.push(new NPC(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(10,2,10), 'npc1', camera, this._canvas));
+        this._npc.push(new NPC(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(10,2,20), 'npc2', camera, this._canvas));
+
+        this._interactObject.push(new InteractObject(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(10,2,20), 'npc2'));
+
+        //glow layer
+        const gl = new GlowLayer("glow", scene);
+        gl.intensity = 0.4;
+        //webpack served from public
+    }
+
+    private async _goToGame() {
+        //--SETUP SCENE--
+        this._scene.detachControl();
+        let scene = this._gamescene;
+        scene.clearColor = new Color4(0.01568627450980392, 0.01568627450980392, 0.20392156862745098); // a color that fit the overall color scheme better
+
+        //Add interactions for buttons
+        document.getElementById("dance").onclick = function(){
+        };
+
+        document.getElementById("settings").onclick = function(){
+        };
+
+        document.getElementById("covo").onclick = function(){
+            window.open('https://www.instagram.com/covo.world/', "_blank");
+        };
+
+        //dont detect any inputs from this ui while the game is loading
+        scene.detachControl();
+
+        //IBL (image based lighting) - to give scene an ambient light
+        const envHdri = new HDRCubeTexture(this._environmentTexture, scene, 512);
+        envHdri.name = "env";
+        envHdri.gammaSpace = false;
+        scene.environmentTexture = envHdri;
+        scene.environmentIntensity = 0.01;
+
+        //--INPUT--
+        this._input = new PlayerInput(scene, this._canvas); //detect keyboard/mobile inputs
+
+        //primitive character and setting
+        await this._initializeGameAsync(scene);
+
+        //--WHEN SCENE FINISHED LOADING--
+        await scene.whenReadyAsync();
+        scene.getMeshByName("outer").position = scene.getTransformNodeByName("startPosition").getAbsolutePosition(); //move the player to the start position
+        //get rid of start scene, switch to gamescene and change states
+        this._scene.dispose();
+        this._state = State.GAME;
+        this._scene = scene;
+        this._scene.gravity = new Vector3(0, -0.15, 0);
+        this._engine.hideLoadingUI();
+        //the game is ready, attach control back
+        this._scene.attachControl();
+
+        //Add UI to the scene
+        document.getElementById('UI').style.display = 'block';
+
+        //Add fade animation to all the meshes in the scene
+        this._scene.meshes.forEach(mesh => {
+            mesh.animations.push(this._fadeAnimation);
+            this._npc.forEach(npc => {
+                if(mesh.name === npc.name){
+                    mesh.animations.pop();
+                }
+            });
+        });
+
+        let lastMousePos = this._scene.pointerX;
+
+        //Update the state of the mouseDown variable and lastMousePos depending on the mouse action and position
+        this._scene.onPointerObservable.add((pointerInfo) => {
+            switch (pointerInfo.type) {
+                case PointerEventTypes.POINTERDOWN:
+                    this._mouseDown = true;
+                    break;
+                case PointerEventTypes.POINTERUP:
+                    this._mouseDown = false;
+                    break;
+                case PointerEventTypes.POINTERMOVE:
+                    if (this._mouseDown && this._scene.getTransformNodeById('convOpen').isEnabled()) {
+                        this._scene.cameras[0]._cache.parent.rotation.y += (this._scene.pointerX - lastMousePos) / 100;
+                    }
+                    lastMousePos = this._scene.pointerX;
+                    break;
+            }
+        });
+
+        this._scene.registerBeforeRender(() => {
+            // Make meshes between player and camera turn transparent
+            this._checkFrontCamera();
+
+            //Optimize automatically scene based on the framerate
+            if(this._engine.getFps() < 15 && this._optimizationLevel < 3) {
+                this._optimizeScene(scene, SceneOptimizerOptions.HighDegradationAllowed(60), 5);
+                this._optimizationLevel = 3;
+            } else if(this._engine.getFps() < 30 && this._optimizationLevel < 2) {
+                this._optimizeScene(scene, SceneOptimizerOptions.ModerateDegradationAllowed(60), 3);
+                this._optimizationLevel = 2;
+            } else if(this._engine.getFps() < 60 && this._optimizationLevel < 1) {
+                this._optimizeScene(scene, SceneOptimizerOptions.LowDegradationAllowed(60), 2);
+                this._optimizationLevel = 1;
+            } else if(this._engine.getFps() > 120 && this.isOptimized){
+                this._optimizer.stop();
+                this._optimizer.reset();
+            }
+        });
+
+        this._scene.registerAfterRender(() => {
+            //Enter dream when passing through the trigger 
+            if(this._player.mesh) {
+                if (this._player.mesh.intersectsMesh(this._scene.getMeshByName("dream")) && !this._goDream ) {
+                    this._goDream = true;
+                    this._gamescene = this._scene;
+                    if(this._dreamPlayer) {
+                        this._scene = this._dreamscene;
+                        this._state = State.DREAM;
+                        return
+                    }
+                    this._goToDream();
+                }
+            }
+        });
+
+        //Multiplayer
+
+        //Initialize
+        this.socket.on('initialize', (arg) => {
+            console.log("Connected Players: " + arg);
+            console.log(arg);
+        });
+
+        //Create Other Users
+        this.socket.on('newPlayer', (remoteSocketId) => {
+            console.log("A new player joined with id: " + remoteSocketId);
+            this.playersIndex = this.playersIndex + 1;
+            this.users[remoteSocketId] = new NPC(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(this._scene.getMeshByName('outer').position.x, this._scene.getMeshByName('outer').position.y + 0.5, this._scene.getMeshByName('outer').position.z), "player.glb", this._scene.cameras[0], this._canvas);
+            console.log(this.users);
+        });
+        
+        //Manage Other Users Movement
+        this.socket.on('playerMoved', (remoteSocketId, posX, posY, posZ) => {
+            if (this.users[remoteSocketId] == null) {
+                this.users[remoteSocketId] = new NPC(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(posX, posY, posZ), "player.glb", this._scene.cameras[0], this._canvas);
+            } else { this.users[remoteSocketId].mesh.position = new Vector3(posX, posY, posZ);}
+        });
+
+        //Delete disconnected player
+        this.socket.on('deletePlayer', (arg) => {
+            console.log("Player " + arg + " just disconnected from the server");
+            this.users[arg].mesh.dispose();
+            delete this.users[arg];
+        });
+
+        //Manage Sounds
+        const music = new Sound("music", "/sounds/kobra.mp3", scene, null,
+          {
+            autoplay: true, 
+            loop: true,
+            spatialSound: true,
+          });
+
+        //--START LOADING AND SETTING UP THE DREAM DURING THIS SCENE--
+        var finishedLoading = false;
+        await this._setUpDream().then(res => {
+            finishedLoading = true;
+            console.log('caricato');
+        });
+    }
+
+    private async _setUpDream() {
+        let scene = new Scene(this._engine);
+        this._dreamscene = scene;
+
+        //--CREATE ENVIRONMENT--
+        const environment = new Environment(scene, "Dream.gltf");
+        this._dreamEnvironment = environment;
+        await this._dreamEnvironment.load(); //environment
+        await this._loadCharacterAssets(scene, this._playerModel);
+    }
+
+    private async _initializeDreamAsync(scene): Promise<void> {
+        scene.ambientColor = new Color3(0, 0, 0);
+        scene.clearColor = new Color4(0, 0, 0);
+
+        const light = new DirectionalLight("sun", new Vector3(-0.5, -0.5, -0.5), scene);
+        light.position = new Vector3(50, 50, 50);
+        light.diffuse = new Color3(0.91, 0.83, 0.52);
+        light.intensity = 1;
+
+        //Create a Node that is used to check for the convOpen
+        new TransformNode('convOpen', scene);
+
+        this.dreamShadowGenerator = new ShadowGenerator(1024, light);
+        this.dreamShadowGenerator.darkness = 0.4;
+        this.dreamShadowGenerator.useBlurExponentialShadowMap = true;
+
+        //Create the player
+        this._dreamPlayer = new Player(this.assets, scene, this.dreamShadowGenerator, this._canvas, this._dreamInput);
+        const camera = this._dreamPlayer.activatePlayerCamera();
+
+        //glow layer
+        const gl = new GlowLayer("glow", scene);
+        gl.intensity = 0.4;
+        //webpack served from public
+    }
+
+    private async _goToDream() {
+        //--SETUP SCENE--
+        this._dreamscene.detachControl();
+        let scene = this._dreamscene;
+        scene.pointerMovePredicate = () => false;
+        scene.pointerDownPredicate = () => false;
+        scene.pointerUpPredicate = () => false;
+        scene.clearColor = new Color4(0.01568627450980392, 0.01568627450980392, 0.20392156862745098); // a color that fit the overall color scheme better
+
+        //Add interactions for buttons
+        document.getElementById("dance").onclick = function(){
+        };
+
+        document.getElementById("settings").onclick = function(){
+        };
+
+        document.getElementById("covo").onclick = function(){
+            window.open('https://www.instagram.com/covo.world/', "_blank");
+        };
+
+        //dont detect any inputs from this ui while the game is loading
+        scene.detachControl();
+
+        
+        //IBL (image based lighting) - to give scene an ambient light
+        const envHdri = new HDRCubeTexture(this._dreamEnvironmentTexture, scene, 512);
+        envHdri.name = "env";
+        envHdri.gammaSpace = false;
+        /*
+        scene.environmentTexture = envHdri;
+        scene.environmentIntensity = 0.1;
+        */
+
+        // Skybox
+	    var skybox = MeshBuilder.CreateSphere("skyBox", {diameter:1000.0}, scene);
+	    var skyboxMaterial = new StandardMaterial("skyBox", scene);
+	    skyboxMaterial.backFaceCulling = false;
+	    skyboxMaterial.reflectionTexture = envHdri;
+	    skyboxMaterial.reflectionTexture.coordinatesMode = Texture.SKYBOX_MODE;
+	    skyboxMaterial.diffuseColor = new Color3(0, 0, 0);
+	    skyboxMaterial.specularColor = new Color3(0, 0, 0);
+	    skybox.material = skyboxMaterial;	
+
+        scene.autoClear = false; // Color buffer
+        scene.autoClearDepthAndStencil = false; // Depth and stencil, obviously
+
+        //--INPUT--
+        this._dreamInput = new PlayerInput(scene, this._canvas); //detect keyboard/mobile inputs
+        console.log(this._dreamInput);
+
+        //primitive character and setting
+        await this._initializeDreamAsync(scene);
+
+        //--WHEN SCENE FINISHED LOADING--
+        await scene.whenReadyAsync();
+        scene.getMeshByName("outer").position = scene.getTransformNodeByName("startPosition").getAbsolutePosition(); //move the player to the start position
+        //get rid of start scene, switch to gamescene and change states
+        this._scene = scene;
+        this._state = State.DREAM;
+        this._scene.gravity = new Vector3(0, -0.15, 0);
+        this._engine.hideLoadingUI();
+        //the game is ready, attach control back
+        this._scene.attachControl();
+
+        //Add UI to the scene
+        document.getElementById('UI').style.display = 'block';
+
+        //Add fade animation to all the meshes in the scene
+        this._scene.meshes.forEach(mesh => {
+            mesh.animations.push(this._fadeAnimation);
+        });
+
+        let lastMousePos = this._scene.pointerX;
+
+        //Update the state of the mouseDown variable and lastMousePos depending on the mouse action and position
+        this._scene.onPointerObservable.add((pointerInfo) => {
+            switch (pointerInfo.type) {
+                case PointerEventTypes.POINTERDOWN:
+                    this._mouseDown = true;
+                    break;
+                case PointerEventTypes.POINTERUP:
+                    this._mouseDown = false;
+                    break;
+                case PointerEventTypes.POINTERMOVE:
+                    if (this._mouseDown) {
+                        this._scene.cameras[0]._cache.parent.rotation.y += (this._scene.pointerX - lastMousePos) / 100;
+                    }
+                    lastMousePos = this._scene.pointerX;
+                    break;
+            }
+        });
+
+        this._scene.registerBeforeRender(() => {
+            // Make meshes between player and camera turn transparent
+            this._checkFrontCamera();
+
+            //Optimize automatically scene based on the framerate
+            if(this._engine.getFps() < 15 && this._optimizationLevel < 3) {
+                this._optimizeScene(scene, SceneOptimizerOptions.HighDegradationAllowed(60), 5);
+                this._optimizationLevel = 3;
+            } else if(this._engine.getFps() < 30 && this._optimizationLevel < 2) {
+                this._optimizeScene(scene, SceneOptimizerOptions.ModerateDegradationAllowed(60), 3);
+                this._optimizationLevel = 2;
+            } else if(this._engine.getFps() < 60 && this._optimizationLevel < 1) {
+                this._optimizeScene(scene, SceneOptimizerOptions.LowDegradationAllowed(60), 2);
+                this._optimizationLevel = 1;
+            } else if(this._engine.getFps() > 120 && this.isOptimized){
+                this._optimizer.stop();
+                this._optimizer.reset();
+            }
+        });
+
+        this._scene.registerAfterRender(() => {
+
+            //Get back to game when passing through the trigger 
+            if(this._dreamPlayer.mesh) {
+                if (this._dreamPlayer.mesh.intersectsMesh(this._scene.getMeshByName("SHRINE"))) {
+                    this._dreamscene.getMeshByName("outer").position = Vector3.Zero();
+                    this._gamescene.getMeshByName('outer').position.z = this._gamescene.getMeshByName('outer').position.z - 15;
+                    this._scene = this._gamescene;
+                    this._state = State.GAME;
+                    this._goDream = false;
+                }
+            }
+        });
     }
 
     private async _loadCharacterAssets(scene, playerModel) {
@@ -290,376 +657,23 @@ class App {
         });
     }
 
-    private async _initializeGameAsync(scene): Promise<void> {
-        scene.ambientColor = new Color3(0, 0, 0);
-        scene.clearColor = new Color4(0, 0, 0);
-
-        const light = new PointLight("sparklight", new Vector3(0, 0, 0), scene);
-        light.diffuse = new Color3(0.08627450980392157, 0.10980392156862745, 0.15294117647058825);
-        light.intensity = 35;
-        light.radius = 1;
-
-        this.shadowGenerator = new ShadowGenerator(1024, light);
-        this.shadowGenerator.darkness = 0.4;
-
-        //Create a Node that is used to check for the convOpen
-        new TransformNode('convOpen', scene);
-
-        //Create the player
-        this._player = new Player(this.assets, scene, this.shadowGenerator, this._canvas, this._input);
-        const camera = this._player.activatePlayerCamera();
-
-        //Create NPCs
-        console.log(this._otherModels);
-        this._npc.push(new NPC(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(10,2,10), 'npc1', camera, this._canvas));
-        this._npc.push(new NPC(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(10,2,20), 'npc2', camera, this._canvas));
-
-        this._interactObject.push(new InteractObject(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(10,2,20), 'npc2'));
-
-        //glow layer
-        const gl = new GlowLayer("glow", scene);
-        gl.intensity = 0.4;
-        //webpack served from public
-    }
-
-    private async _goToGame() {
-        //--SETUP SCENE--
-        this._scene.detachControl();
-        let scene = this._gamescene;
-        scene.clearColor = new Color4(0.01568627450980392, 0.01568627450980392, 0.20392156862745098); // a color that fit the overall color scheme better
-
-        //--GUI--
-        const playerUI = AdvancedDynamicTexture.CreateFullscreenUI("UI");
-        playerUI.layer.layerMask = 0x10000000;
-
-        //Create first menu container
-        var menu1 = new Container('menu1');
-        menu1.width = "500px";
-        menu1.height = "250px";
-        menu1.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-        menu1.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-        playerUI.addControl(menu1);
-
-        //Create first menu UI
-        var image = uiElement("menu1img", "/textures/UI/Menu1.png", 1, 1, '');
-        menu1.addControl(image);
-
-        //Create first button
-        var bot1 = uiElement("bot1", "/textures/UI/Bot1.png", '100px', "120px", 'menu', "20px", "20px", Control.VERTICAL_ALIGNMENT_BOTTOM, Control.HORIZONTAL_ALIGNMENT_LEFT);
-        menu1.addControl(bot1);
-
-        //Create second button
-        var bot2 = uiElement("bot2", "/textures/UI/Bot2.png", '60px', "80px", 'menu', "140px", "20px", Control.VERTICAL_ALIGNMENT_BOTTOM, Control.HORIZONTAL_ALIGNMENT_LEFT);
-        menu1.addControl(bot2);
-
-        //Create third button
-        var bot3 = uiElement("bot3", "/textures/UI/Bot3.png", '60px', "80px", 'menu', "230px", "20px", Control.VERTICAL_ALIGNMENT_BOTTOM, Control.HORIZONTAL_ALIGNMENT_LEFT);
-        menu1.addControl(bot3);
-
-        //Add interactions for buttons
-        bot1.onPointerDownObservable.add(function () {
-            bot1.scaleX = .9;
-            bot1.scaleY = .9;
-        });
-
-        //Create second menu container
-        var menu2 = new Container('menu2');
-        menu2.width = "350px";
-        menu2.height = "125px";
-        menu2.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-        menu2.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-        playerUI.addControl(menu2);
-
-        //Create second menu UI
-        var image2 = uiElement("menu2img", "/textures/UI/Menu2.png", 1, 1, '');
-        menu2.addControl(image2);
-
-        //check if device is mobile or desktop, and change UI accordingly
-        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-            menu1.rotation = Math.PI;
-            menu1.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-            menu1.width = 1;
-            //menu1.height = menu1.width * .6;
-
-            menu2.width = 1;
-            //menu2.height = menu2.width * 0.25;
-            image2.source = "/textures/UI/Menu2mobile.png";
-        }
-
-        //dont detect any inputs from this ui while the game is loading
-        scene.detachControl();
-
-        //IBL (image based lighting) - to give scene an ambient light
-        const envHdri = new HDRCubeTexture(this._environmentTexture, scene, 512);
-        envHdri.name = "env";
-        envHdri.gammaSpace = false;
-        scene.environmentTexture = envHdri;
-        scene.environmentIntensity = 0.01;
-
-        //--INPUT--
-        this._input = new PlayerInput(scene, this._canvas); //detect keyboard/mobile inputs
-
-        //primitive character and setting
-        await this._initializeGameAsync(scene);
-
-        //--WHEN SCENE FINISHED LOADING--
-        await scene.whenReadyAsync();
-        scene.getMeshByName("outer").position = scene.getTransformNodeByName("startPosition").getAbsolutePosition(); //move the player to the start position
-        //get rid of start scene, switch to gamescene and change states
-        this._scene.dispose();
-        this._state = State.GAME;
-        this._scene = scene;
-        this._scene.gravity = new Vector3(0, -0.15, 0);
-        this._engine.hideLoadingUI();
-        //the game is ready, attach control back
-        this._scene.attachControl();
-
-        //Add fade animation to all the meshes in the scene
-        this._scene.meshes.forEach(mesh => {
-            mesh.animations.push(this._fadeAnimation);
-            this._npc.forEach(npc => {
-                if(mesh.name === npc.name){
-                    mesh.animations.pop();
-                }
-            });
-        });
-
-        let lastMousePos = this._scene.pointerX;
-
-        //Update the state of the mouseDown variable and lastMousePos depending on the mouse action and position
-        this._scene.onPointerObservable.add((pointerInfo) => {
-            switch (pointerInfo.type) {
-                case PointerEventTypes.POINTERDOWN:
-                    this._mouseDown = true;
-                    break;
-                case PointerEventTypes.POINTERUP:
-                    this._mouseDown = false;
-                    break;
-                case PointerEventTypes.POINTERMOVE:
-                    if (this._mouseDown && this._scene.getTransformNodeById('convOpen').isEnabled()) {
-                        this._scene.cameras[0]._cache.parent.rotation.y += (this._scene.pointerX - lastMousePos) / 100;
-                    }
-                    lastMousePos = this._scene.pointerX;
-                    break;
+    private _optimizeScene(scene, degradation, hardwareOptimization) {
+        let game = this;
+        SceneOptimizer.OptimizeAsync(scene, degradation,
+            function() {
+            var options = new SceneOptimizerOptions(60, 500);
+            options.addOptimization(new HardwareScalingOptimization(0, hardwareOptimization));
+            options.addOptimization(new TextureOptimization(0, 1));
+  
+            // Optimizer
+            if(game.isOptimized) {
+                game._optimizer.stop();
+                game._optimizer.reset();
             }
+            game._optimizer = new SceneOptimizer(scene, options);
+            game._optimizer.start();
+            game.isOptimized = true;
         });
-
-        this._scene.registerBeforeRender(() => {
-            // Make meshes between player and camera turn transparent
-            this._checkFrontCamera();
-        });
-
-        this._scene.registerAfterRender(() => {
-            //Get time between last and this frame
-            this.deltaTime = this._engine.getDeltaTime();      
-        });
-
-        //Multiplayer
-
-        //Initialize
-        this.socket.on('initialize', (arg) => {
-            console.log("Connected Players: " + arg);
-            console.log(arg);
-        });
-
-        //Create Other Users
-        this.socket.on('newPlayer', (remoteSocketId) => {
-            console.log("A new player joined with id: " + remoteSocketId);
-            this.playersIndex = this.playersIndex + 1;
-            this.users[remoteSocketId] = new NPC(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(this._scene.getMeshByName('outer').position.x, this._scene.getMeshByName('outer').position.y + 0.5, this._scene.getMeshByName('outer').position.z), "player.glb", this._scene.cameras[0], this._canvas);
-            console.log(this.users);
-        });
-        
-        //Manage Other Users Movement
-        this.socket.on('playerMoved', (remoteSocketId, posX, posY, posZ) => {
-            if (this.users[remoteSocketId] == null) {
-                this.users[remoteSocketId] = new NPC(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(posX, posY, posZ), "player.glb", this._scene.cameras[0], this._canvas);
-            } else { this.users[remoteSocketId].mesh.position = new Vector3(posX, posY, posZ);}
-        });
-
-        //Delete disconnected player
-        this.socket.on('deletePlayer', (arg) => {
-            console.log("Player " + arg + " just disconnected from the server");
-            this.users[arg].mesh.dispose();
-            delete this.users[arg];
-        });
-
-        //Manage Sounds
-        const music = new Sound("music", "/sounds/kobra.mp3", scene, null,
-          {
-            autoplay: true, 
-            loop: true,
-            spatialSound: true,
-          });
-    }
-
-    private async _setUpDream() {
-        let scene = new Scene(this._engine);
-        this._gamescene = scene;
-
-        //--CREATE ENVIRONMENT--
-        const environment = new Environment(scene, "Dream.gltf");
-        this._environment = environment;
-        await this._environment.load(); //environment
-        await this._loadCharacterAssets(scene, this._playerModel);
-    }
-
-    private async _initializeDreamAsync(scene): Promise<void> {
-        scene.ambientColor = new Color3(0, 0, 0);
-        scene.clearColor = new Color4(0, 0, 0);
-
-        const light = new PointLight("sparklight", new Vector3(0, 0, 0), scene);
-        light.diffuse = new Color3(0.08627450980392157, 0.10980392156862745, 0.15294117647058825);
-        light.intensity = 35;
-        light.radius = 1;
-
-        this.shadowGenerator = new ShadowGenerator(1024, light);
-        this.shadowGenerator.darkness = 0.4;
-
-        //Create the player
-        this._player = new Player(this.assets, scene, this.shadowGenerator, this._canvas, this._input);
-        const camera = this._player.activatePlayerCamera();
-
-        //glow layer
-        const gl = new GlowLayer("glow", scene);
-        gl.intensity = 0.4;
-        //webpack served from public
-    }
-
-    private async _goToDream() {
-        //--SETUP SCENE--
-        this._scene.detachControl();
-        let scene = this._gamescene;
-        scene.clearColor = new Color4(0.01568627450980392, 0.01568627450980392, 0.20392156862745098); // a color that fit the overall color scheme better
-
-        //--GUI--
-        const playerUI = AdvancedDynamicTexture.CreateFullscreenUI("UI");
-        playerUI.layer.layerMask = 0x10000000;
-
-        //Create first menu container
-        var menu1 = new Container('menu1');
-        menu1.width = "500px";
-        menu1.height = "250px";
-        menu1.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-        menu1.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-        playerUI.addControl(menu1);
-
-        //Create first menu UI
-        var image = uiElement("menu1img", "/textures/UI/Menu1.png", 1, 1, '');
-        menu1.addControl(image);
-
-        //Create first button
-        var bot1 = uiElement("bot1", "/textures/UI/Bot1.png", '100px', "120px", 'menu', "20px", "20px", Control.VERTICAL_ALIGNMENT_BOTTOM, Control.HORIZONTAL_ALIGNMENT_LEFT);
-        menu1.addControl(bot1);
-
-        //Create second button
-        var bot2 = uiElement("bot2", "/textures/UI/Bot2.png", '60px', "80px", 'menu', "140px", "20px", Control.VERTICAL_ALIGNMENT_BOTTOM, Control.HORIZONTAL_ALIGNMENT_LEFT);
-        menu1.addControl(bot2);
-
-        //Create third button
-        var bot3 = uiElement("bot3", "/textures/UI/Bot3.png", '60px', "80px", 'menu', "230px", "20px", Control.VERTICAL_ALIGNMENT_BOTTOM, Control.HORIZONTAL_ALIGNMENT_LEFT);
-        menu1.addControl(bot3);
-
-        //Add interactions for buttons
-        bot1.onPointerDownObservable.add(function () {
-            bot1.scaleX = .9;
-            bot1.scaleY = .9;
-        });
-
-        //Create second menu container
-        var menu2 = new Container('menu2');
-        menu2.width = "350px";
-        menu2.height = "125px";
-        menu2.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-        menu2.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-        playerUI.addControl(menu2);
-
-        //Create second menu UI
-        var image2 = uiElement("menu2img", "/textures/UI/Menu2.png", 1, 1, '');
-        menu2.addControl(image2);
-
-        //check if device is mobile or desktop, and change UI accordingly
-        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-            menu1.rotation = Math.PI;
-            menu1.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-            menu1.width = 1;
-            //menu1.height = menu1.width * .6;
-
-            menu2.width = 1;
-            //menu2.height = menu2.width * 0.25;
-            image2.source = "/textures/UI/Menu2mobile.png";
-        }
-
-        //dont detect any inputs from this ui while the game is loading
-        scene.detachControl();
-
-        //IBL (image based lighting) - to give scene an ambient light
-        const envHdri = new HDRCubeTexture(this._environmentTexture, scene, 512);
-        envHdri.name = "env";
-        envHdri.gammaSpace = false;
-        scene.environmentTexture = envHdri;
-        scene.environmentIntensity = 0.01;
-
-        //--INPUT--
-        this._input = new PlayerInput(scene, this._canvas); //detect keyboard/mobile inputs
-
-        //primitive character and setting
-        await this._initializeGameAsync(scene);
-
-        //--WHEN SCENE FINISHED LOADING--
-        await scene.whenReadyAsync();
-        scene.getMeshByName("outer").position = scene.getTransformNodeByName("startPosition").getAbsolutePosition(); //move the player to the start position
-        //get rid of start scene, switch to gamescene and change states
-        this._scene.dispose();
-        this._state = State.DREAM;
-        this._scene = scene;
-        this._scene.gravity = new Vector3(0, -0.15, 0);
-        this._engine.hideLoadingUI();
-        //the game is ready, attach control back
-        this._scene.attachControl();
-
-        //Add fade animation to all the meshes in the scene
-        this._scene.meshes.forEach(mesh => {
-            mesh.animations.push(this._fadeAnimation);
-            this._npc.forEach(npc => {
-                if(mesh.name === npc.name){
-                    mesh.animations.pop();
-                }
-            });
-        });
-
-        let lastMousePos = this._scene.pointerX;
-
-        //Update the state of the mouseDown variable and lastMousePos depending on the mouse action and position
-        this._scene.onPointerObservable.add((pointerInfo) => {
-            switch (pointerInfo.type) {
-                case PointerEventTypes.POINTERDOWN:
-                    this._mouseDown = true;
-                    break;
-                case PointerEventTypes.POINTERUP:
-                    this._mouseDown = false;
-                    break;
-                case PointerEventTypes.POINTERMOVE:
-                    if (this._mouseDown && this._scene.getTransformNodeById('convOpen').isEnabled()) {
-                        this._scene.cameras[0]._cache.parent.rotation.y += (this._scene.pointerX - lastMousePos) / 100;
-                    }
-                    lastMousePos = this._scene.pointerX;
-                    break;
-            }
-        });
-
-        this._scene.registerBeforeRender(() => {
-            // Make meshes between player and camera turn transparent
-            this._checkFrontCamera();
-        });
-
-        //Manage Sounds
-        const music = new Sound("music", "/sounds/farnemolti.wav", scene, null,
-          {
-            autoplay: true, 
-            loop: true,
-            spatialSound: true,
-          });
     }
 
     //Check if something is between the camera and the player
