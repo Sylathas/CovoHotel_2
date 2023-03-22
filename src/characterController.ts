@@ -7,7 +7,6 @@ export class Player extends TransformNode {
     public scene: Scene;
     private _input;
     private _canvas: HTMLCanvasElement;
-    private game;
 
     //Multiplayer
     private socket = theFramework.socket;
@@ -69,8 +68,6 @@ export class Player extends TransformNode {
         this.mesh = assets.mesh;
         this.mesh.parent = this;
 
-        this.scene.getLightByName("sparklight").parent = this.scene.getTransformNodeByName("Empty");
-
         this._idle = assets.animationGroups[1];
         this._run = assets.animationGroups[0];
 
@@ -79,6 +76,7 @@ export class Player extends TransformNode {
         this._setUpAnimations(); //Call the function to set up the animations
 
         this._input = input;
+        console.log(this._input);
 
         //--COLLISIONS--
         this.mesh.actionManager = new ActionManager(this.scene);
@@ -361,11 +359,12 @@ export class Player extends TransformNode {
 
     private _updateCamera(): void {
         let centerPlayer = this.mesh.position.y + 2;
-        if(this.scene.getTransformNodeById('convOpen').isEnabled()){
-            this._camRoot.position = Vector3.Lerp(this._camRoot.position, new Vector3(this.mesh.position.x, centerPlayer, this.mesh.position.z), 0.4);
-        } else{
-            
+        if(this.scene.getTransformNodeById('convOpen')) {
+            if(this.scene.getTransformNodeById('convOpen').isEnabled()){
+                this._camRoot.position = Vector3.Lerp(this._camRoot.position, new Vector3(this.mesh.position.x, centerPlayer, this.mesh.position.z), 0.4);
+            }
         }
+
         if(this.camera.radius < 1) {
             this.mesh.setEnabled(false);
         } else {
@@ -412,18 +411,6 @@ export class Player extends TransformNode {
         this.camera.inputs.remove(this.camera.inputs.attached.keyboard); //Remove keyboard controls 
         this.camera.parent = yTilt; //Parent to yTilt
 
-        var bgCamera = new ArcRotateCamera("bgCam", Math.PI * 1.5, Math.PI / 2, 10, this._camRoot.position, this.scene);
-        bgCamera.layerMask = 0x10000000;
-        //Set camera limits
-        bgCamera.lowerRadiusLimit = 0;
-        bgCamera.upperRadiusLimit = 100;
-        bgCamera.lowerBetaLimit = Math.PI / 4;
-        bgCamera.upperBetaLimit = Math.PI / 1.5;
-        bgCamera.lowerAlphaLimit = Math.PI * 1.5;
-        bgCamera.upperAlphaLimit = Math.PI * 1.5;
-        bgCamera.parent = yTilt; //Parent to yTilt
-
-        this.scene.activeCameras = [this.camera, bgCamera];
-        return this.camera;
+≈        return this.camera;
     }
 }
