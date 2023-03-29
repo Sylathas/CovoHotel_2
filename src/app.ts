@@ -373,9 +373,9 @@ class App {
         //Multiplayer
 
         //Initialize
-        this.socket.on('initialize', (arg) => {
-            console.log("Connected Players: " + arg);
-            console.log(arg);
+        this.socket.on('initialize', (startingTime, players) => {
+            console.log("Starting Time: " + startingTime);
+            console.log("Connected Players: " + players);
         });
 
         //Create Other Users
