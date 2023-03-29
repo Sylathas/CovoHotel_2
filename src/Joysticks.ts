@@ -6,8 +6,8 @@ export class Joysticks {
     public _canvas: HTMLCanvasElement;
     public _posX;
     public _posY;
-    //Control to see in which axis is the controller in
-    private _posController: Vector4 = Vector4.Zero();
+    public _oldPosY;
+    public _oldPosX;
 
     constructor(canvas: HTMLCanvasElement, scene) {
         this._canvas = canvas;
@@ -21,17 +21,16 @@ export class Joysticks {
         let bottomJoystickOffset = -150;
 
         //Define the Movement Controller
-        let leftThumbContainer = this.makeThumbArea("leftThumb", 2, "blue", null);
+        let leftThumbContainer = this.makeThumbArea("leftThumb", 2, "white", null);
         leftThumbContainer.height = "500px";
         leftThumbContainer.width = "500px";
         leftThumbContainer.isPointerBlocker = true;
-        leftThumbContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-        leftThumbContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-        leftThumbContainer.alpha = 0.4;
-        leftThumbContainer.top = bottomJoystickOffset;
+        leftThumbContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+        leftThumbContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+        leftThumbContainer.alpha = 0;
 
         //Define the Movement Controller's puck
-        let leftPuck = this.makeThumbArea("leftPuck", 0, "blue", "blue");
+        let leftPuck = this.makeThumbArea("leftPuck", 0, "white", "white");
         leftPuck.height = "100px";
         leftPuck.width = "100px";
         leftPuck.isPointerBlocker = true;
@@ -39,22 +38,28 @@ export class Joysticks {
         leftPuck.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
         leftPuck.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
 
-        leftThumbContainer.onPointerDownObservable.add(function (coordinates) {
+        canvas.addEventListener('touchstart', () => {
+            leftThumbContainer.top = scene.pointerY - 250;
+            leftThumbContainer.left = scene.pointerX - 250;
             leftPuck.isVisible = true;
             leftThumbContainer.alpha = 1;
+            game._oldPosX = scene.pointerX;
+            game._oldPosY = scene.pointerY;
         });
 
-        leftThumbContainer.onPointerUpObservable.add(function (coordinates) {
+        canvas.addEventListener('touchend', () => {
             leftPuck.isVisible = false;
-            leftThumbContainer.alpha = 0.4;
+            leftThumbContainer.alpha = 0;
             game._posX = 0;
             game._posY = 0;
+            leftPuck.left = game._posX;
+            leftPuck.top = game._posY;
         });
 
-        leftThumbContainer.onPointerMoveObservable.add(function (coordinates) {
+        canvas.addEventListener('touchmove', () => {
             if (leftPuck.isVisible) {
-                game._posX = scene.pointerX - canvas.width / 2;
-                game._posY = scene.pointerY - canvas.height + 450;
+                game._posX = scene.pointerX - game._oldPosX;
+                game._posY = scene.pointerY - game._oldPosY;
                 leftPuck.left = game._posX;
                 leftPuck.top = game._posY;
             }

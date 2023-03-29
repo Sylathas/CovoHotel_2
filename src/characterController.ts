@@ -24,6 +24,8 @@ export class Player extends TransformNode {
     private _jump: AnimationGroup;
     private _land: AnimationGroup;
     private _dash: AnimationGroup;
+    private _dance: AnimationGroup;
+    public _isDancing: boolean;
 
     // animation trackers
     private _currentAnim: AnimationGroup = null;
@@ -59,7 +61,7 @@ export class Player extends TransformNode {
     private _grounded: boolean;
     private _jumpCount: number = 1;
 
-    constructor(assets, scene: Scene, shadowGenerator: ShadowGenerator, canvas: HTMLCanvasElement, input?) {
+    constructor(assets, scene: Scene, shadowGenerator: ShadowGenerator[], canvas: HTMLCanvasElement, input?) {
         super("player", scene);
         this._canvas = canvas;
         this.scene = scene;
@@ -71,7 +73,10 @@ export class Player extends TransformNode {
         this._idle = assets.animationGroups[1];
         this._run = assets.animationGroups[0];
 
-        shadowGenerator.addShadowCaster(assets.mesh); //the player mesh will cast shadows
+        shadowGenerator.forEach(element => {
+            element.addShadowCaster(assets.mesh);
+            //the player mesh will cast shadows
+        });
 
         this._setUpAnimations(); //Call the function to set up the animations
 
@@ -171,6 +176,7 @@ export class Player extends TransformNode {
         this.scene.stopAllAnimations();
         this._run.loopAnimation = true;
         this._idle.loopAnimation = true;
+        //this._dance.loopAnimation = true;
 
         //initialize current and previous
         this._currentAnim = this._idle;
@@ -185,7 +191,11 @@ export class Player extends TransformNode {
         } else if (this._jumped && !this._isFalling && !this._dashPressed) {
             //this._currentAnim = this._jump;
         } else if (!this._isFalling && this._grounded) {
-            this._currentAnim = this._idle;
+            if(this._isDancing){
+                this._currentAnim = this._dance;
+            } else {
+                this._currentAnim = this._idle;
+            }
             //only notify observer if it's playing
             /*if(this.scene.getSoundByName("walking").isPlaying){
                 this.onRun.notifyObservers(false);

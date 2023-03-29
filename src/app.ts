@@ -4,6 +4,7 @@ import "@babylonjs/loaders/glTF";
 
 import { Engine, Scene, Vector3, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, HDRCubeTexture, Texture, PointerEventTypes, Ray, Animation, PickingInfo, AnimationGroup, TransformNode, Sound, SceneOptimizerOptions, HardwareScalingOptimization, SceneOptimizer, LensFlaresOptimization, TextureOptimization, DirectionalLight} from "@babylonjs/core";
 import { AdvancedDynamicTexture, Button, Control, Container } from "@babylonjs/gui";
+
 import { Environment } from "./environment";
 import { Player } from "./characterController";
 import { PlayerInput } from "./inputController";
@@ -11,6 +12,7 @@ import { NPC } from "./NPC";
 import { InteractObject } from "./interactObject";
 import { theFramework } from "./multiplayer"
 import { io, Socket } from "socket.io-client";
+import { OtherPlayer } from './otherPlayers'
 
 enum State { START = 0, GAME = 1, LOADING = 2, DREAM = 3 }
 
@@ -56,7 +58,7 @@ class App {
     private _cutScene: Scene;
 
     //Camera related
-    private shadowGenerator;
+    private shadowGenerator: ShadowGenerator[] = [];
     private dreamShadowGenerator;
     private _mouseDown: boolean = false;
 
@@ -171,6 +173,7 @@ class App {
 
     private async _goToStart() {
         this._engine.displayLoadingUI();
+        console.log(screen.width);
 
         this._scene.detachControl();
         let scene = new Scene(this._engine);
@@ -178,24 +181,13 @@ class App {
         let camera = new FreeCamera("camera1", new Vector3(0, 0, 0), scene);
         camera.setTarget(Vector3.Zero());
 
-        //create a fullscreen ui for all of our GUI elements
-        const guiMenu = AdvancedDynamicTexture.CreateFullscreenUI("UI");
-        guiMenu.idealHeight = 720; //fit our fullscreen ui to this height
+        const game = this;
 
-        //create a simple button
-        const startBtn = Button.CreateSimpleButton("start", "PLAY");
-        startBtn.width = 0.2
-        startBtn.height = "40px";
-        startBtn.color = "white";
-        startBtn.top = "-14px";
-        startBtn.thickness = 0;
-        startBtn.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-        guiMenu.addControl(startBtn);
-
-        //this handles interactions with the start button attached to the scene
-        startBtn.onPointerDownObservable.add(() => {
-            this._goToGame();
-        });
+        $('#enterMobile, #enterDesktop').on('click', () => {
+            if(finishedLoading){
+                game._goToGame();
+            }
+        })
 
         //--SCENE FINISHED LOADING--
         await scene.whenReadyAsync();
@@ -205,10 +197,23 @@ class App {
         this._scene = scene;
         this._state = State.START;
 
+        //Change loading screen on mobile
+        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+            $('.backgroundVideo').attr('src', './textures/Loading_mobile.mp4');
+            $('.glow').attr('class', 'glow glowMobile');
+            $('#danceDesktop').attr('id', 'danceMobile');
+            $('#settingsDesktop').attr('id', 'settingsMobile');
+            $('#covoDesktop').attr('id', 'covoMobile');
+            $('.UIButton').attr('class', 'UIButton UIButtonMobile');
+            $('#enterDesktop').attr('id', 'enterMobile');
+        }
+
         //--START LOADING AND SETTING UP THE GAME DURING THIS SCENE--
         var finishedLoading = false;
         await this._setUpGame().then(res => {
             finishedLoading = true;
+            $('#Loading span').css('display', 'none');
+            $('#enterMobile, #enterDesktop').css('opacity', '1');
         });
     }
 
@@ -217,7 +222,7 @@ class App {
         this._gamescene = scene;
 
         //--CREATE ENVIRONMENT--
-        const environment = new Environment(scene, "Layout.glb");
+        const environment = new Environment(scene, "Layout.gltf");
         this._environment = environment;
         await this._environment.load(); //environment
         await this._loadCharacterAssets(scene, this._playerModel);
@@ -228,13 +233,25 @@ class App {
         scene.ambientColor = new Color3(0, 0, 0);
         scene.clearColor = new Color4(0, 0, 0);
 
-        const light = new PointLight("sparklight", new Vector3(0, 0, 0), scene);
-        light.diffuse = new Color3(0.08627450980392157, 0.10980392156862745, 0.15294117647058825);
-        light.intensity = 35;
-        light.radius = 1;
+        const game = this;
 
-        this.shadowGenerator = new ShadowGenerator(1024, light);
-        this.shadowGenerator.darkness = 0.4;
+        await scene.getNodes().forEach(element => {
+            if(element.name.includes('light')) {
+                element.id = 'light';
+            }
+        });
+
+        await scene.getTransformNodesById('light').forEach(element => {
+            const light = new PointLight("sparklight", element.position, scene);
+            light.diffuse = new Color3(0.08627450980392157, 0.10980392156862745, 0.15294117647058825);
+            light.intensity = 50;
+            light.radius = 20;
+            const shadow =  new ShadowGenerator(1024, light);
+            shadow.darkness = 0.4;
+            game.shadowGenerator.push(shadow);
+        });
+
+        console.log(this.shadowGenerator);
 
         //Create a Node that is used to check for the convOpen
         new TransformNode('convOpen', scene);
@@ -244,7 +261,6 @@ class App {
         const camera = this._player.activatePlayerCamera();
 
         //Create NPCs
-        console.log(this._otherModels);
         this._npc.push(new NPC(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(10,2,10), 'npc1', camera, this._canvas));
         this._npc.push(new NPC(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(10,2,20), 'npc2', camera, this._canvas));
 
@@ -262,16 +278,27 @@ class App {
         let scene = this._gamescene;
         scene.clearColor = new Color4(0.01568627450980392, 0.01568627450980392, 0.20392156862745098); // a color that fit the overall color scheme better
 
+        const game = this;
+        
         //Add interactions for buttons
-        document.getElementById("dance").onclick = function(){
-        };
+        $("#danceDesktop, #danceMobile").on( 'click', () => {
+            console.log('dance');
+            if(game._player._isDancing){
+                game._player._isDancing = false;
+                $('#danceDesktop, #danceMobile').css('background-image', 'url("./textures/UI/Bot1.png")');
+            } else {
+                game._player._isDancing = true;
+                $('#danceDesktop, #danceMobile').css('background-image', 'url("./textures/UI/Bot1.2.png")');
+            }
+        });
 
-        document.getElementById("settings").onclick = function(){
-        };
+        $("#settingsDesktop, #settingsMobile").on('click', () => {
 
-        document.getElementById("covo").onclick = function(){
+        });
+
+        $("#covoDesktop, #covoMobile").on('click', () => {
             window.open('https://www.instagram.com/covo.world/', "_blank");
-        };
+        });
 
         //dont detect any inputs from this ui while the game is loading
         scene.detachControl();
@@ -302,16 +329,19 @@ class App {
         this._scene.attachControl();
 
         //Add UI to the scene
+        jQuery('#Loading').css('display', 'none');
         document.getElementById('UI').style.display = 'block';
 
         //Add fade animation to all the meshes in the scene
         this._scene.meshes.forEach(mesh => {
-            mesh.animations.push(this._fadeAnimation);
-            this._npc.forEach(npc => {
-                if(mesh.name === npc.name){
-                    mesh.animations.pop();
-                }
-            });
+            if(mesh.getClassName() != "InstancedMesh"){
+                mesh.animations.push(this._fadeAnimation);
+                this._npc.forEach(npc => {
+                    if(mesh.name === npc.name){
+                        mesh.animations.pop();
+                    }
+                });
+            }
         });
 
         let lastMousePos = this._scene.pointerX;
@@ -321,6 +351,9 @@ class App {
             switch (pointerInfo.type) {
                 case PointerEventTypes.POINTERDOWN:
                     this._mouseDown = true;
+                    if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                        lastMousePos = this._scene.pointerX;
+                    }
                     break;
                 case PointerEventTypes.POINTERUP:
                     this._mouseDown = false;
@@ -328,8 +361,13 @@ class App {
                 case PointerEventTypes.POINTERMOVE:
                     if (this._mouseDown && this._scene.getTransformNodeById('convOpen').isEnabled()) {
                         this._scene.cameras[0]._cache.parent.rotation.y += (this._scene.pointerX - lastMousePos) / 100;
+                        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                            lastMousePos = this._scene.pointerX;
+                        }
                     }
-                    lastMousePos = this._scene.pointerX;
+                    if (!/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                        lastMousePos = this._scene.pointerX;
+                    }
                     break;
             }
         });
@@ -337,6 +375,16 @@ class App {
         this._scene.registerBeforeRender(() => {
             // Make meshes between player and camera turn transparent
             this._checkFrontCamera();
+            const game = this;
+
+            this._scene.getTransformNodesById('light').forEach(element => {
+                if(Vector3.Distance(game._player.position, element.position) > 20) {
+                    console.log('wow');
+                    element.setEnabled(true);
+                } else {
+                    element.setEnabled(false);
+                }
+            });
 
             //Optimize automatically scene based on the framerate
             if(this._engine.getFps() < 15 && this._optimizationLevel < 3) {
@@ -354,7 +402,7 @@ class App {
             }
         });
 
-        this._scene.registerAfterRender(() => {
+        /*this._scene.registerAfterRender(() => {
             //Enter dream when passing through the trigger 
             if(this._player.mesh) {
                 if (this._player.mesh.intersectsMesh(this._scene.getMeshByName("dream")) && !this._goDream ) {
@@ -368,7 +416,7 @@ class App {
                     this._goToDream();
                 }
             }
-        });
+        });*/
 
         //Multiplayer
 
@@ -382,14 +430,14 @@ class App {
         this.socket.on('newPlayer', (remoteSocketId) => {
             console.log("A new player joined with id: " + remoteSocketId);
             this.playersIndex = this.playersIndex + 1;
-            this.users[remoteSocketId] = new NPC(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(this._scene.getMeshByName('outer').position.x, this._scene.getMeshByName('outer').position.y + 0.5, this._scene.getMeshByName('outer').position.z), "player.glb", this._scene.cameras[0], this._canvas);
+            this.users[remoteSocketId] = new OtherPlayer(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(this._scene.getMeshByName('outer').position.x, this._scene.getMeshByName('outer').position.y + 0.5, this._scene.getMeshByName('outer').position.z), "player.glb");
             console.log(this.users);
         });
         
         //Manage Other Users Movement
         this.socket.on('playerMoved', (remoteSocketId, posX, posY, posZ) => {
             if (this.users[remoteSocketId] == null) {
-                this.users[remoteSocketId] = new NPC(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(posX, posY, posZ), "player.glb", this._scene.cameras[0], this._canvas);
+                this.users[remoteSocketId] = new OtherPlayer(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(posX, posY, posZ), "player.glb");
             } else { this.users[remoteSocketId].mesh.position = new Vector3(posX, posY, posZ);}
         });
 
@@ -462,16 +510,27 @@ class App {
         scene.pointerUpPredicate = () => false;
         scene.clearColor = new Color4(0.01568627450980392, 0.01568627450980392, 0.20392156862745098); // a color that fit the overall color scheme better
 
+        const game = this;
+
         //Add interactions for buttons
-        document.getElementById("dance").onclick = function(){
-        };
+        $("#dance").on( 'click', () => {
+            console.log('dance');
+            if(game._player._isDancing){
+                game._player._isDancing = false;
+                $('#dance').css('background-image', 'url("./textures/UI/Bot1.png")');
+            } else {
+                game._player._isDancing = true;
+                $('#dance').css('background-image', 'url("./textures/UI/Bot1.2.png")');
+            }
+        });
 
-        document.getElementById("settings").onclick = function(){
-        };
+        $("#settings").on('click', () => {
 
-        document.getElementById("covo").onclick = function(){
+        });
+
+        $("#covo").on('click', () => {
             window.open('https://www.instagram.com/covo.world/', "_blank");
-        };
+        });
 
         //dont detect any inputs from this ui while the game is loading
         scene.detachControl();
@@ -520,11 +579,6 @@ class App {
         //Add UI to the scene
         document.getElementById('UI').style.display = 'block';
 
-        //Add fade animation to all the meshes in the scene
-        this._scene.meshes.forEach(mesh => {
-            mesh.animations.push(this._fadeAnimation);
-        });
-
         let lastMousePos = this._scene.pointerX;
 
         //Update the state of the mouseDown variable and lastMousePos depending on the mouse action and position
@@ -546,9 +600,6 @@ class App {
         });
 
         this._scene.registerBeforeRender(() => {
-            // Make meshes between player and camera turn transparent
-            this._checkFrontCamera();
-
             //Optimize automatically scene based on the framerate
             if(this._engine.getFps() < 15 && this._optimizationLevel < 3) {
                 this._optimizeScene(scene, SceneOptimizerOptions.HighDegradationAllowed(60), 5);
