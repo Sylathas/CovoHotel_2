@@ -10,7 +10,7 @@ export class InteractObject extends TransformNode {
     //NPC 
     public mesh: AbstractMesh; //outer collisionbox of Interactible Object
 
-    constructor(assets ,scene: Scene, shadowGenerator: ShadowGenerator, position, name) {
+    constructor(assets ,scene: Scene, shadowGenerator: ShadowGenerator[], position, name) {
         super(name, scene);
         this.scene = scene;
 
@@ -19,7 +19,9 @@ export class InteractObject extends TransformNode {
         this.mesh = copyMesh.clone(name, this);
         this.mesh.position = position;
 
-        shadowGenerator.addShadowCaster(this.mesh); //the Interactible Object mesh will cast shadows
+        shadowGenerator.forEach(element => {
+            element.addShadowCaster(this.mesh); //the NPC mesh will cast shadows
+        });
 
         //animate NPC with Idle animation
         this._idle = assets.animationGroups[1];

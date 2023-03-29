@@ -20,6 +20,8 @@ export class NPC extends TransformNode {
     private dialogueCounterLocal: number = 0; //index of text of current conversation
     private dialogueText: TextBlock;
     private dialogues;
+    private goldPass: boolean = false;
+    private covoPin: boolean = false;
 
     // --FOR CAMERA MOVEMENT--
 
@@ -31,7 +33,7 @@ export class NPC extends TransformNode {
     // Bools to keep track of states
     private enableAnim: boolean = false;
 
-    constructor(assets ,scene: Scene, shadowGenerator: ShadowGenerator, position: Vector3, name: string, camera, canvas: HTMLCanvasElement) {
+    constructor(assets ,scene: Scene, shadowGenerator: ShadowGenerator[], position: Vector3, name: string, camera, canvas: HTMLCanvasElement) {
         super(name, scene);
         this.scene = scene;
         this.camera = camera;
@@ -48,7 +50,10 @@ export class NPC extends TransformNode {
         this.scene.stopAllAnimations();
         this._idle.loopAnimation = true;
 
-        shadowGenerator.addShadowCaster(this.mesh); //the NPC mesh will cast shadows
+        shadowGenerator.forEach(element => {
+            element.addShadowCaster(this.mesh); //the NPC mesh will cast shadows
+        });
+        
 
         //Add event on click of NPC
         this.scene.onPointerObservable.add((pointerInfo) => {      		
@@ -143,6 +148,7 @@ export class NPC extends TransformNode {
         //Add interaction on Click
         dialogue.isPointerBlocker = true;
         dialogue.onPointerDownObservable.add(function () {
+            //End conversation if the dialogues are finished
             if(!game.enableAnim && !game.dialogues[game.name][game.dialogueCounterGlobal][game.dialogueCounterLocal]){
                 if(game.dialogues[game.name][game.dialogueCounterGlobal + 1]){
                     game.dialogueCounterGlobal++;
@@ -153,6 +159,30 @@ export class NPC extends TransformNode {
                 game.nextCameraTarget = game.oldPos;
                 game.enableAnim = true;
                 lensEffect.disableDepthOfField;
+                //Check if the pusher gives you the golden pass
+                if(game.name === 'Pusher' && !game.dialogues[game.name][game.dialogueCounterGlobal + 1]) {
+                    game.goldPass = true;
+                    $('#ticket').css('display', 'block');
+                    setTimeout(() => {
+                        $('#ticket').css('transform', 'translate(50%, 50%) scale(1)');
+                    }, 100);
+                    setTimeout(() => {
+                        $('#ticket').css({'bottom': '50px', 'right': '50px', 'transform': '', 'width': '150px', 'height': '150px', 'pointer-events': 'all'});
+                    }, 1000);
+                }
+                //
+                if(game.name === 'Boss' && !game.dialogues[game.name][game.dialogueCounterGlobal + 1]) {
+                    game.covoPin = true;
+                    $('#spilla').css('display', 'block');
+                    setTimeout(() => {
+                        $('#spilla').css('transform', 'translate(50%, 50%) scale(1)');
+                    }, 100);
+                    setTimeout(() => {
+                        $('#spilla').css({'bottom': '250px', 'right': '50px', 'transform': '', 'width': '150px', 'height': '150px', 'pointer-events': 'all'});
+                    }, 1000);
+                }
+
+            //Continue conversation if dialogues are not finished
             } else if (game.dialogues[game.name][game.dialogueCounterGlobal][game.dialogueCounterLocal]) {
                 game.dialogueText.text = game.dialogueText.text = convsMale[game.name][game.dialogueCounterGlobal][game.dialogueCounterLocal];
                 game.dialogueCounterLocal++;

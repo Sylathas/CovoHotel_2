@@ -1,5 +1,4 @@
-﻿import { Scene, AbstractMesh, SceneLoader } from "@babylonjs/core";
-import { Lantern } from "./lantern";
+﻿import { Scene, AbstractMesh, SceneLoader, ShadowGenerator, PointLight, Vector3, Color3 } from "@babylonjs/core";
 import { Player } from "./characterController";
 
 export class Environment {
@@ -7,6 +6,7 @@ export class Environment {
 
     //Meshes
     public environmentModel: string; //mesh of the map
+    public shadowGenerators = [];
 
     constructor(scene: Scene, environment: string) {
         this._scene = scene;
@@ -28,7 +28,6 @@ export class Environment {
                 m.checkCollisions = false;
                 m.isPickable = false;
                 m.doNotSyncBoundingInfo = true;
-
             }
             //areas that will use box collisions
             if (m.name.includes("stairs")) {
@@ -47,7 +46,6 @@ export class Environment {
                 m.isPickable = false;
                 m.checkCollisions = false;
             }
-
             //ground mesh
             if (m.name.includes("Terrain")) {
                 m.receiveShadows = true;
