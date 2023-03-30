@@ -18,7 +18,7 @@ export class NPC extends TransformNode {
     //DIALOGUE
     private dialogueCounterGlobal: number = 0; //index of conversation
     private dialogueCounterLocal: number = 0; //index of text of current conversation
-    private dialogueText: TextBlock;
+    private _dialogueOn: boolean = false;
     private dialogues;
     private goldPass: boolean = false;
     private covoPin: boolean = false;
@@ -39,6 +39,7 @@ export class NPC extends TransformNode {
         this.camera = camera;
         this.canvas = canvas;
         this.dialogues = convsMale;
+        const game = this;
 
         //Initialize the NPC 
         const copyMesh = this.scene.getMeshByName(assets.name);
@@ -53,7 +54,6 @@ export class NPC extends TransformNode {
         shadowGenerator.forEach(element => {
             element.addShadowCaster(this.mesh); //the NPC mesh will cast shadows
         });
-        
 
         //Add event on click of NPC
         this.scene.onPointerObservable.add((pointerInfo) => {      		
@@ -63,6 +63,59 @@ export class NPC extends TransformNode {
                         this.pointerDown(pointerInfo.pickInfo.pickedMesh);
                     }
 		        break;
+            }
+        });
+
+        //System of dialogue on click
+        $(document).on('click', () => {
+            console.log('click');
+            if(game._dialogueOn) {
+                //End conversation if the dialogues are finished
+                if(!game.enableAnim && !game.dialogues[game.name][game.dialogueCounterGlobal][game.dialogueCounterLocal]){
+                    console.log(game.dialogueCounterLocal, game.dialogueCounterGlobal);
+                    if(game.dialogues[game.name][game.dialogueCounterGlobal + 1]){
+                        game.dialogueCounterGlobal++;
+                    }
+                    game.dialogueCounterLocal = 0;
+                    game.nextCameraTarget = game.oldPos;
+                    game.enableAnim = true;
+                    game._dialogueOn = false;
+
+                    //make div disappear
+                    $('#dialogueContainer').css('opacity', '0');
+                    setTimeout(() => {
+                        $('#dialogueContainer').css('display', 'none');
+                    }, 500);
+                //Continue conversation if dialogues are not finished
+                } else if (game.dialogues[game.name][game.dialogueCounterGlobal][game.dialogueCounterLocal]) {
+                    console.log(game.dialogueCounterLocal, game.dialogueCounterGlobal, game.dialogues[game.name][game.dialogueCounterGlobal][game.dialogueCounterLocal + 1], game.name);
+                    $('.dialogue div').text(convsMale[game.name][game.dialogueCounterGlobal][game.dialogueCounterLocal]);
+                    game.dialogueCounterLocal++;
+
+                    //Check if the pusher gives you the golden pass
+                    if(game.name === 'Pusher' && !game.dialogues[game.name][game.dialogueCounterGlobal + 1]) {
+                        game.goldPass = true;
+                        $('#ticket').css('display', 'block');
+                        setTimeout(() => {
+                            $('#ticket').css('transform', 'translate(50%, 50%) scale(1)');
+                        }, 100);
+                        setTimeout(() => {
+                            $('#ticket').css({'bottom': '50px', 'right': '50px', 'transform': '', 'width': '150px', 'height': '150px', 'pointer-events': 'all'});
+                        }, 1000);
+                    }
+
+                    //Check if the owner gives you the pin
+                    if(game.name === 'Boss' && !game.dialogues[game.name][game.dialogueCounterGlobal + 1]) {
+                        game.covoPin = true;
+                        $('#spilla').css('display', 'block');
+                        setTimeout(() => {
+                            $('#spilla').css('transform', 'translate(50%, 50%) scale(1)');
+                        }, 100);
+                        setTimeout(() => {
+                            $('#spilla').css({'bottom': '250px', 'right': '50px', 'transform': '', 'width': '150px', 'height': '150px', 'pointer-events': 'all'});
+                        }, 1000);
+                    }
+                }
             }
         });
 
@@ -106,110 +159,18 @@ export class NPC extends TransformNode {
     private _dialogue(): any {
         //for internal functions
         let game = this;
-
         this.camera.detachControl();
 
-        //Create depth of field effect
-        var lensEffect = new LensRenderingPipeline('lens', {
-            dof_focus_distance: 2000,
-            dof_aperture: 6.0,			// set this very high for tilt-shift effect
-            dof_pentagon: true,
-        }, this.scene, 1.0, [this.camera]);
-    
-        // -- CREATE DIALOGUE GUI--
-        const playerUI = AdvancedDynamicTexture.CreateFullscreenUI("DialogueUI");
-        playerUI.layer.layerMask = 0x10000000;
+        //Initialize dialogue UI
+        $('#dialogueContainer').css('display', 'flex');
+        setTimeout(() => {
+            $('#dialogueContainer').css('opacity', '1');
+        }, 500);
+
+        //Add first text
+        $('.dialogue div').text(game.dialogues[this.name][this.dialogueCounterGlobal][this.dialogueCounterLocal]);
+        $('.dialogueName').text(game.name);
         
-        //Create dialogue container
-        var dialogue = new StackPanel('DialogueContainer');
-        dialogue.width = "800px";
-        dialogue.height = "348px";
-        dialogue.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-        dialogue.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-        playerUI.addControl(dialogue);
-
-        //Create dialogue image containers
-        var dialogueNameContainer = new Container('dialogueNameContainer');
-        var dialogueMenuContainer = new Container('dialogueMenuContainer');
-        dialogueNameContainer.width = "444px";
-        dialogueNameContainer.height = "100px";
-        dialogueNameContainer.paddingBottom = '50px';
-        dialogueMenuContainer.width = "800px";
-        dialogueMenuContainer.height = "250px";
-        dialogue.addControl(dialogueNameContainer);
-        dialogue.addControl(dialogueMenuContainer);
-        
-        //Create 
-        var dialogueName = uiElement("dialogueName", "/textures/UI/DialogueName.png", '444px', '48px', 'dialogue');
-        var dialogueMenu = uiElement("dialogueImage", "/textures/UI/Dialogue.png", '800px', '250px', 'dialogue');
-        dialogueNameContainer.addControl(dialogueName);
-        dialogueMenuContainer.addControl(dialogueMenu);
-    
-        //Add interaction on Click
-        dialogue.isPointerBlocker = true;
-        dialogue.onPointerDownObservable.add(function () {
-            //End conversation if the dialogues are finished
-            if(!game.enableAnim && !game.dialogues[game.name][game.dialogueCounterGlobal][game.dialogueCounterLocal]){
-                if(game.dialogues[game.name][game.dialogueCounterGlobal + 1]){
-                    game.dialogueCounterGlobal++;
-                }
-                game.dialogueCounterLocal = 0;
-                playerUI.dispose();
-                lensEffect.dispose();
-                game.nextCameraTarget = game.oldPos;
-                game.enableAnim = true;
-                lensEffect.disableDepthOfField;
-                //Check if the pusher gives you the golden pass
-                if(game.name === 'Pusher' && !game.dialogues[game.name][game.dialogueCounterGlobal + 1]) {
-                    game.goldPass = true;
-                    $('#ticket').css('display', 'block');
-                    setTimeout(() => {
-                        $('#ticket').css('transform', 'translate(50%, 50%) scale(1)');
-                    }, 100);
-                    setTimeout(() => {
-                        $('#ticket').css({'bottom': '50px', 'right': '50px', 'transform': '', 'width': '150px', 'height': '150px', 'pointer-events': 'all'});
-                    }, 1000);
-                }
-                //
-                if(game.name === 'Boss' && !game.dialogues[game.name][game.dialogueCounterGlobal + 1]) {
-                    game.covoPin = true;
-                    $('#spilla').css('display', 'block');
-                    setTimeout(() => {
-                        $('#spilla').css('transform', 'translate(50%, 50%) scale(1)');
-                    }, 100);
-                    setTimeout(() => {
-                        $('#spilla').css({'bottom': '250px', 'right': '50px', 'transform': '', 'width': '150px', 'height': '150px', 'pointer-events': 'all'});
-                    }, 1000);
-                }
-
-            //Continue conversation if dialogues are not finished
-            } else if (game.dialogues[game.name][game.dialogueCounterGlobal][game.dialogueCounterLocal]) {
-                game.dialogueText.text = game.dialogueText.text = convsMale[game.name][game.dialogueCounterGlobal][game.dialogueCounterLocal];
-                game.dialogueCounterLocal++;
-            }
-            
-        });
-
-        //Create name text
-        let nameText = new TextBlock();
-        nameText.text = this.name;
-        nameText.color = "white";
-        nameText.fontSize = 24;
-        dialogueNameContainer.addControl(nameText);  
-
-        //Create initial dialogue text
-        this.dialogueText = new TextBlock();
-        this.dialogueText.text = game.dialogues[this.name][this.dialogueCounterGlobal][this.dialogueCounterLocal];
-        this.dialogueText.color = "white";
-        this.dialogueText.textWrapping = true;
-        this.dialogueText.setPadding(0, 50, 0, 50);
-        this.dialogueText.fontSize = 24;
-        dialogueMenuContainer.addControl(this.dialogueText);  
-        this.dialogueCounterLocal++;
-    
-        //check if device is mobile or desktop, and change UI accordingly
-        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-    
-        }
+        this._dialogueOn = true;
     }
 }

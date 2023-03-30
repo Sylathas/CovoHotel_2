@@ -23,13 +23,30 @@ type NPCAssets = {
    name: string;
 }
 
+//Change UI on mobile
+if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+    $('.backgroundVideo').attr('src', './textures/Loading_mobile.mp4');
+    $('.glow').attr('class', 'glow glowMobile');
+    $('.buttons').attr('id', 'buttonsMobile');
+    $(".buttons").css('background-image', 'url("./textures/UI/Menu1_mobile.png")')
+    $('#danceDesktop').attr('id', 'danceMobile');
+    $('#settingsDesktop').attr('id', 'settingsMobile');
+    $('#covoDesktop').attr('id', 'covoMobile');
+    $('.UIButton').attr('class', 'UIButton UIButtonMobile');
+    $('#enterDesktop').attr('id', 'enterMobile');
+    $('.tutorial').attr('id', 'tutMobile');
+    $('#hideTutorial').css('display', 'block');
+    $('.dialogue').attr('id', 'dialogueMobile');
+    $('.dialogueName').attr('id', 'dialogueNameMobile');
+}
+
 class App {
 
     //General Entire Application
     private _scene: Scene;
     private _canvas: HTMLCanvasElement;
     private _engine: Engine;
-
+    
     //Game State Related
     public assets;
     public otherAssets : { [name: string]: NPCAssets } = {};
@@ -38,6 +55,7 @@ class App {
     private _player: Player;
     private _npc: NPC[] = [];
     private _interactObject: InteractObject[] = [];
+    private _MapGame: string = 'Layout.gltf'; //mesh of the game map
     private _environmentTexture: string = "textures/env.hdr"; //environment texture for HDRI and skybox
     private _playerModel: string = "player_animated.glb"; //mesh of the player
     private _otherModels: string[] = ["player_animated.glb"]; //mesh of npcs and interactive objects
@@ -48,6 +66,7 @@ class App {
     private _dreamInput: PlayerInput;
     private _dreamEnvironment;
     private _dreamPlayer: Player;
+    private _MapDream: string = 'Dream.gltf'; //mesh of the game map
     private _dreamEnvironmentTexture: string = "textures/sky.hdr"; //environment texture for HDRI and skybox
     private _goDream: boolean;
 
@@ -173,7 +192,6 @@ class App {
 
     private async _goToStart() {
         this._engine.displayLoadingUI();
-        console.log(screen.width);
 
         this._scene.detachControl();
         let scene = new Scene(this._engine);
@@ -187,7 +205,7 @@ class App {
             if(finishedLoading){
                 game._goToGame();
             }
-        })
+        });
 
         //--SCENE FINISHED LOADING--
         await scene.whenReadyAsync();
@@ -196,17 +214,6 @@ class App {
         this._scene.dispose();
         this._scene = scene;
         this._state = State.START;
-
-        //Change loading screen on mobile
-        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-            $('.backgroundVideo').attr('src', './textures/Loading_mobile.mp4');
-            $('.glow').attr('class', 'glow glowMobile');
-            $('#danceDesktop').attr('id', 'danceMobile');
-            $('#settingsDesktop').attr('id', 'settingsMobile');
-            $('#covoDesktop').attr('id', 'covoMobile');
-            $('.UIButton').attr('class', 'UIButton UIButtonMobile');
-            $('#enterDesktop').attr('id', 'enterMobile');
-        }
 
         //--START LOADING AND SETTING UP THE GAME DURING THIS SCENE--
         var finishedLoading = false;
@@ -222,7 +229,7 @@ class App {
         this._gamescene = scene;
 
         //--CREATE ENVIRONMENT--
-        const environment = new Environment(scene, "Layout.gltf");
+        const environment = new Environment(scene, this._MapGame);
         this._environment = environment;
         await this._environment.load(); //environment
         await this._loadCharacterAssets(scene, this._playerModel);
@@ -250,8 +257,6 @@ class App {
             shadow.darkness = 0.4;
             game.shadowGenerator.push(shadow);
         });
-
-        console.log(this.shadowGenerator);
 
         //Create a Node that is used to check for the convOpen
         new TransformNode('convOpen', scene);
@@ -300,6 +305,20 @@ class App {
             window.open('https://www.instagram.com/covo.world/', "_blank");
         });
 
+        //Hide and show button on mobile
+        let tutHid = true;
+        $("#hideTutorial, #tutMobile").on('click', () => {
+            if(tutHid) {
+                $('#tutMobile').css('transform', 'translate(-50%, 0)');
+                $('#hideTutorial').css({'top': '20%', 'background-image': 'url("./textures/UI/hideUI.png")'});
+                tutHid = false;
+            } else {
+                $('#tutMobile').css('transform', 'translate(-50%, -100%)');
+                $('#hideTutorial').css({'top': '0', 'background-image': 'url("./textures/UI/showUI.png")'});
+                tutHid = true;
+            }
+        });
+
         //dont detect any inputs from this ui while the game is loading
         scene.detachControl();
 
@@ -308,7 +327,7 @@ class App {
         envHdri.name = "env";
         envHdri.gammaSpace = false;
         scene.environmentTexture = envHdri;
-        scene.environmentIntensity = 0.01;
+        scene.environmentIntensity = 1;
 
         //--INPUT--
         this._input = new PlayerInput(scene, this._canvas); //detect keyboard/mobile inputs
@@ -329,7 +348,7 @@ class App {
         this._scene.attachControl();
 
         //Add UI to the scene
-        jQuery('#Loading').css('display', 'none');
+        $('#Loading').css('display', 'none');
         document.getElementById('UI').style.display = 'block';
 
         //Add fade animation to all the meshes in the scene
@@ -351,6 +370,7 @@ class App {
             switch (pointerInfo.type) {
                 case PointerEventTypes.POINTERDOWN:
                     this._mouseDown = true;
+                    //If it's on a touch device, it needs to be updated everytime it touches, not when it moves
                     if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
                         lastMousePos = this._scene.pointerX;
                     }
@@ -469,7 +489,7 @@ class App {
         this._dreamscene = scene;
 
         //--CREATE ENVIRONMENT--
-        const environment = new Environment(scene, "Dream.gltf");
+        const environment = new Environment(scene, this._MapDream);
         this._dreamEnvironment = environment;
         await this._dreamEnvironment.load(); //environment
         await this._loadCharacterAssets(scene, this._playerModel);
@@ -560,7 +580,6 @@ class App {
 
         //--INPUT--
         this._dreamInput = new PlayerInput(scene, this._canvas); //detect keyboard/mobile inputs
-        console.log(this._dreamInput);
 
         //primitive character and setting
         await this._initializeDreamAsync(scene);

@@ -42,14 +42,14 @@ export class PlayerInput {
 
         //add to the scene an observable that calls updateFromKeyboard or updateFromController and update before rendering
         scene.onBeforeRenderObservable.add(() => {
-            if(scene.getTransformNodeById('convOpen')) {
+            if (scene.getTransformNodeById('convOpen')) {
                 if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-                    if(scene.getTransformNodeById('convOpen').isEnabled()){
+                    if (scene.getTransformNodeById('convOpen').isEnabled()) {
                         this._updateFromController(scene);
                     }
-    
+
                 } else {
-                    if(scene.getTransformNodeById('convOpen').isEnabled()){
+                    if (scene.getTransformNodeById('convOpen').isEnabled()) {
                         this._updateFromKeyboard(scene);
                     }
                 }
@@ -58,7 +58,7 @@ export class PlayerInput {
     }
 
     private _updateFromController(scene): void {
-        if ( this.joystickPos._posY < -50) {
+        if (this.joystickPos._posY < -50) {
             this.vertical = Scalar.Lerp(this.vertical, 1, 0.5);
             this._rotateCamera(scene);
         } else if (this.joystickPos._posY > 50) {
@@ -108,13 +108,6 @@ export class PlayerInput {
         } else {
             this.horizontal = 0;
             this.horizontalAxis = 0;
-        }
-
-        //dash
-        if (this.inputMap["Shift"]) {
-            this.dashing = true;
-        } else {
-            this.dashing = false;
         }
 
         //Jump Checks (SPACE)

@@ -22,6 +22,7 @@ export class OtherPlayer extends TransformNode {
         this.mesh = copyMesh.clone(name, this);
         this.mesh.position = position;
         this.mesh.isEnabled(false);
+        this.mesh.isPickable = false;
 
         //animate NPC with animation
         this._idle = assets.animationGroups[1];
