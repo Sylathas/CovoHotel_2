@@ -548,7 +548,8 @@ class App {
 
         const game = this;
 
-
+        //Remove old music
+        game._music.setVolume(0);
 
         //Add interactions for buttons
         $("#dance").on('click', () => {
@@ -732,6 +733,10 @@ class App {
                         $('#tutMobile').css('background-image', 'url("./textures/UI/Tutorial_Mobile.png")');
                         $('#dreamTime').css('display', 'none');
                     }
+                    //Music Back On
+                    this._music.setVolume(1)
+                    this._dreamMainMusic.setVolume(0);
+                    this._dreamStem.setVolume(0);
                     this._dreamscene.getMeshByName("outer").position = Vector3.Zero();
                     this._scene = this._gamescene;
                     this._state = State.GAME;
