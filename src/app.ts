@@ -417,6 +417,7 @@ class App {
             if (this._player.mesh) {
                 if (this._player.mesh.intersectsMesh(this._scene.getMeshByName("dream")) && !this._goDream) {
                     this._goDream = true;
+                    console.log('yo');
                     this._gamescene = this._scene;
                     if (this._dreamPlayer) {
                         this._scene = this._dreamscene;
