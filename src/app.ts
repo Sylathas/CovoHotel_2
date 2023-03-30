@@ -281,7 +281,6 @@ class App {
         this._npc.push(new NPC(this.otherAssets['Raver.gltf'], scene, this.shadowGenerator, scene.getTransformNodeByName("Raver").getAbsolutePosition(), 'Raver', camera, this._canvas));
         this._npc.push(new NPC(this.otherAssets['Snobby.gltf'], scene, this.shadowGenerator, scene.getTransformNodeByName("Snobby").getAbsolutePosition(), 'Snobby', camera, this._canvas));
         this._npc.push(new NPC(this.otherAssets['Owner.gltf'], scene, this.shadowGenerator, scene.getTransformNodeByName("Owner").getAbsolutePosition(), 'Owner', camera, this._canvas));
-        new OtherPlayer(this.otherAssets['Player.gltf'], scene, this.shadowGenerator, new Vector3(0, 0, 0), "Player.gltf")
 
         //glow layer
         const gl = new GlowLayer("glow", scene);
@@ -454,7 +453,7 @@ class App {
             //Add trigger on walking to the vip lounge without the golden pass
             if (this._player.mesh) {
                 if (this._player.mesh.intersectsMesh(this._scene.getMeshByName('trigger')) && !this._npc[7].goldPass) {
-                    this._player.position = this._scene.getTransformNodeByName('kickedOut').absolutePosition;
+                    this._player.position = this._scene.getTransformNodeByName('kickedPosition').absolutePosition;
                 }
             }
         });
@@ -478,7 +477,7 @@ class App {
         //Manage Other Users Movement
         this.socket.on('playerMoved', (remoteSocketId, posX, posY, posZ, playerRotation) => {
             if (this.users[remoteSocketId] == null) {
-                this.users[remoteSocketId] = new OtherPlayer(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(posX, posY, posZ), "player.glb");
+                this.users[remoteSocketId] = new OtherPlayer(this.otherAssets['Player.gltf'], scene, this.shadowGenerator, new Vector3(posX, posY, posZ), "Player.gltf");
             } else { this.users[remoteSocketId].mesh.position = new Vector3(posX, posY, posZ); }
         });
 
