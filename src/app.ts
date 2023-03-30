@@ -47,7 +47,7 @@ class App {
     private _scene: Scene;
     private _canvas: HTMLCanvasElement;
     private _engine: Engine;
-    private startingTime = 1680189300
+    private startingTime = 1680189600;
 
     //Game State Related
     public assets;
@@ -282,6 +282,9 @@ class App {
         this._npc.push(new NPC(this.otherAssets['Raver.gltf'], scene, this.shadowGenerator, scene.getTransformNodeByName("Raver").getAbsolutePosition(), 'Raver', camera, this._canvas));
         this._npc.push(new NPC(this.otherAssets['Snobby.gltf'], scene, this.shadowGenerator, scene.getTransformNodeByName("Snobby").getAbsolutePosition(), 'Snobby', camera, this._canvas));
         this._npc.push(new NPC(this.otherAssets['Owner.gltf'], scene, this.shadowGenerator, scene.getTransformNodeByName("Owner").getAbsolutePosition(), 'Owner', camera, this._canvas));
+        this._npc.push(new NPC(this.otherAssets['Dj.gltf'], scene, this.shadowGenerator, scene.getTransformNodeByName("Dj").getAbsolutePosition(), 'Dj', camera, this._canvas));
+
+        new OtherPlayer(this._otherModels['Player.gltf'], scene, this.shadowGenerator, new Vector3(this._player.position.x, this._player.position.y, this._player.position.z), "Player.gltf");
 
         //glow layer
         const gl = new GlowLayer("glow", scene);
@@ -451,12 +454,12 @@ class App {
                 }
             }
 
-            //Add trigger on walking to the vip lounge without the golden pass
-            if (this._player.mesh) {
-                if (this._player.mesh.intersectsMesh(this._scene.getMeshByName('trigger')) && !this._npc[7].goldPass) {
-                    this._player.position = this._scene.getTransformNodeByName('kickedPosition').absolutePosition;
+            /*if (this._npc[7]) {
+                console.log(this._npc[1]);
+                if (this._npc[7].goldPass) {
+                    this._npc[1].dialogueCounterGlobal++;
                 }
-            }
+            }*/
         });
 
         //Multiplayer
@@ -471,14 +474,14 @@ class App {
         this.socket.on('newPlayer', (remoteSocketId) => {
             console.log("A new player joined with id: " + remoteSocketId);
             this.playersIndex = this.playersIndex + 1;
-            this.users[remoteSocketId] = new OtherPlayer(this.otherAssets['Player.gltf'], scene, this.shadowGenerator, new Vector3(this._scene.getMeshByName('outer').position.x, this._scene.getMeshByName('outer').position.y + 0.5, this._scene.getMeshByName('outer').position.z), "Player.gltf");
+            this.users[remoteSocketId] = new OtherPlayer(this._otherModels['Player.gltf'], scene, this.shadowGenerator, new Vector3(this._scene.getMeshByName('outer').position.x, this._scene.getMeshByName('outer').position.y + 0.5, this._scene.getMeshByName('outer').position.z), "Player.gltf");
             console.log(this.users);
         });
 
         //Manage Other Users Movement
         this.socket.on('playerMoved', (remoteSocketId, posX, posY, posZ, playerRotation) => {
             if (this.users[remoteSocketId] == null) {
-                this.users[remoteSocketId] = new OtherPlayer(this.otherAssets['Player.gltf'], scene, this.shadowGenerator, new Vector3(posX, posY, posZ), "Player.gltf");
+                this.users[remoteSocketId] = new OtherPlayer(this._otherModels['Player.gltf'], scene, this.shadowGenerator, new Vector3(posX, posY, posZ), "Player.gltf");
             } else { this.users[remoteSocketId].mesh.position = new Vector3(posX, posY, posZ); }
         });
 

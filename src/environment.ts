@@ -44,7 +44,7 @@ export class Environment {
             if (m.name.includes("trigger")) {
                 m.isVisible = false;
                 m.isPickable = false;
-                m.checkCollisions = false;
+                m.checkCollisions = true;
             }
             //ground mesh
             if (m.name.includes("Terrain")) {

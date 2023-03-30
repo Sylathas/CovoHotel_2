@@ -16,7 +16,7 @@ export class NPC extends TransformNode {
     private mesh: AbstractMesh; //outer collisionbox of NPC
 
     //DIALOGUE
-    private dialogueCounterGlobal: number = 0; //index of conversation
+    public dialogueCounterGlobal: number = 0; //index of conversation
     private dialogueCounterLocal: number = 0; //index of text of current conversation
     private _dialogueOn: boolean = false;
     private dialogues = convsMale;
@@ -76,6 +76,7 @@ export class NPC extends TransformNode {
                     //Check if the pusher gives you the golden pass
                     if (game.name === 'Plug' && game.dialogueCounterGlobal == 1 && !game.goldPass) {
                         game.goldPass = true;
+                        game._scene.getMeshByName('trigger').checkCollisions = false;
                         $('#ticket').css('display', 'block');
                         setTimeout(() => {
                             $('#ticket').css('transform', 'translate(50%, 50%) scale(1)');
@@ -113,7 +114,7 @@ export class NPC extends TransformNode {
                         this.gotoDream = true;
                     }
 
-                    if (game.dialogues[game.name][game.dialogueCounterGlobal + 1]) {
+                    if (game.dialogues[game.name][game.dialogueCounterGlobal + 1] && this.name != 'Bouncer') {
                         game.dialogueCounterGlobal++;
                     }
                     game.dialogueCounterLocal = 0;
@@ -159,13 +160,15 @@ export class NPC extends TransformNode {
 
     private pointerDown = (mesh) => {
         console.log(this.name, mesh);
-        if (mesh.name.startsWith(this.name) && !this.enableAnim && this.name != 'Deadman') { //check that the picked mesh is the NPC
-            this.nextCameraRadius = 10.5;
-            this.oldPos = this.scene.getTransformNodeById('root').position;
-            this.nextCameraTarget = this.mesh.position;
-            this.enableAnim = true;
-            this._dialogue();
-            this.scene.getTransformNodeById('convOpen').setEnabled(false);
+        if (mesh.name.startsWith(this.name) && !this.enableAnim) { //check that the picked mesh is the NPC
+            if (this.name != 'Deadman' && this.name != 'Dj') {
+                this.nextCameraRadius = 10.5;
+                this.oldPos = this.scene.getTransformNodeById('root').position;
+                this.nextCameraTarget = this.mesh.position;
+                this.enableAnim = true;
+                this._dialogue();
+                this.scene.getTransformNodeById('convOpen').setEnabled(false);
+            }
         }
     }
 

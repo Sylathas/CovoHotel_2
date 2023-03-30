@@ -25,6 +25,8 @@ export let convsMale = {
   Bouncer: [
     ["From these stairs you can access the private area, EXCLUSIVELY with the golden pass.",
       "What? You don't have it? Sorry, no pass, no private area.",
+    ],
+    [
       "I see you got your golden pass, go ahead and enter but try not to cause any trouble."
     ]
   ],

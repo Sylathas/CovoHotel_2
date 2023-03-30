@@ -30,21 +30,12 @@ export class OtherPlayer extends TransformNode {
         this.mesh.isPickable = false;
 
         //animate NPC with animation
-        this._idle = assets.animationGroups[1];
-        this.scene.stopAllAnimations();
-        this._idle.loopAnimation = true;
+        //this._idle = assets.animationGroups[1];
+        //this.scene.stopAllAnimations();
+        //this._idle.loopAnimation = true;
 
         shadowGenerator.forEach(element => {
             element.addShadowCaster(this.mesh); //the player mesh will cast shadows
         });
-
-
-        this.scene.registerBeforeRender(() => {
-            this._animatePlayer();
-        });
-    }
-
-    private _animatePlayer(): void {
-        this._idle.play(this._idle.loopAnimation);
     }
 }
