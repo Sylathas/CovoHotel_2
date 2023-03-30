@@ -1,9 +1,11 @@
 ﻿<!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="UTF-8">
     <title>BARS by Covo</title>
-    <script src="https://code.jquery.com/jquery-3.6.4.min.js" integrity="sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8=" crossorigin="anonymous"></script> 
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"
+        integrity="sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8=" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Goldman">
     <style>
         body {
@@ -97,7 +99,7 @@
             left: 72%;
         }
 
-        .backgroundVideo{
+        .backgroundVideo {
             width: 100vw;
             height: 100vh;
             object-fit: cover;
@@ -110,7 +112,7 @@
             position: absolute;
             bottom: 50%;
             right: 50%;
-            transform: translate(50%,50%) scale(0);
+            transform: translate(50%, 50%) scale(0);
             width: 400px;
             height: 400px;
             background-size: cover;
@@ -218,7 +220,7 @@
             height: 150px;
             background-size: contain;
         }
-        
+
         #tutMobile {
             top: 0;
             left: 50%;
@@ -318,16 +320,113 @@
             font-size: 5vw;
         }
 
+        .settingsMenu {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background-image: url('./textures/UI/Dialogue_mobile.png');
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 100% 100%;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: all;
+            color: white;
+        }
+
+        .settingsMenu h3 {
+            margin: 0;
+        }
+
+        #settingsMenuDesktop {
+            width: 50%;
+            height: 50%;
+            font-size: 1.5em;
+        }
+
+        #settingsMenuMobile {
+            width: 80%;
+            height: 65%;
+            font-size: 4em;
+        }
+
+        #settingsMenuMobile .slider {
+            height: 10%;
+        }
+
+        #settingsMenuMobile .slider::-webkit-slider-thumb {
+            width: 10vw;
+            height: 10vw;
+        }
+
+        .slider {
+            -webkit-appearance: none;
+            width: 70%;
+            background: none;
+            outline: 2px solid #25dd2c;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 23px;
+            height: 23px;
+            border: 0;
+            background: url('./textures/UI/slider_button.png');
+            background-size: 100% 100%;
+            cursor: pointer;
+        }
+
+        .settingMenuIcon {
+            background-size: 100% 100%;
+            cursor: pointer;
+        }
+
+        #settingsMenuMobile #settingsIcon {
+            height: 200px;
+            width: 200px;
+        }
+
+        #settingsIcon {
+            width: 100px;
+            height: 100px;
+            background-image: url('./textures/UI/Bot2.png');
+        }
+
+        #closeIcon {
+            margin-top: 30px;
+            width: 50px;
+            height: 50px;
+            background-image: url('./textures/UI/CloseSettings.png');
+        }
+
+        #settingsMenuMobile #closeIcon {
+            height: 150px;
+            width: 150px;
+            margin-top: 60px;
+        }
+
+        #dreamTime {
+            display: none;
+            pointer-events: all;
+
+        }
+
         @keyframes glow {
             from {
                 text-shadow: 0 0 10px #fff;
             }
+
             to {
                 text-shadow: 0 0 20px #ffffff8a;
             }
         }
     </style>
 </head>
+
 <body>
     <div id="Loading">
         <video autoplay muted loop class="backgroundVideo">
@@ -344,18 +443,31 @@
             <div id="settingsDesktop" class="UIButton UIButtonDesktop"></div>
             <div id="covoDesktop" class="UIButton UIButtonDesktop"></div>
         </div>
-        <div id="spilla" class="obtainable"></div>
-        <div id="ticket" class="obtainable"></div>
-        <div id="businessCard" class="obtainable"></div>
-        <div id="dialogueContainer">
-            <div class="dialogueName" id="dialogueNameDesktop">
-                <p>A</p>
-            </div>
-            <div class="dialogue" id="dialogueDesktop">
-                <div>AAAAAAAAAAAA</div>
-            </div>
+        <div class="settingsMenu" id="settingsMenuDesktop">
+            <div id="settingsIcon" class="settingMenuIcon"></div>
+            <h3>Music</h3>
+            <input type="range" min="1" max="100" value="50" class="slider" id="musicDesktop">
+            <h3>Ambient</h3>
+            <input type="range" min="1" max="100" value="50" class="slider" id="ambientDesktop">
+            <h3>Voices</h3>
+            <input type="range" min="1" max="100" value="50" class="slider" id="voicesDesktop">
+            <div id="closeIcon" class="settingMenuIcon"></div>
         </div>
-        <div class="dialogueMenu" id="dialogueMenuDesktop"></div>
+        <input type="range" min="1" max="100" value="50" class="slider" id="dreamTime">
+    </div>
+    <div id="spilla" class="obtainable"></div>
+    <div id="ticket" class="obtainable"></div>
+    <div id="businessCard" class="obtainable"></div>
+    <div id="dialogueContainer">
+        <div class="dialogueName" id="dialogueNameDesktop">
+            <p>A</p>
+        </div>
+        <div class="dialogue" id="dialogueDesktop">
+            <div>AAAAAAAAAAAA</div>
+        </div>
+    </div>
+    <div class="dialogueMenu" id="dialogueMenuDesktop"></div>
     </div>
 </body>
+
 </html>

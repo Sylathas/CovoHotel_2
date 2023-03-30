@@ -23,6 +23,7 @@ export class Player extends TransformNode {
     private _idle: AnimationGroup;
     private _jump: AnimationGroup;
     private _land: AnimationGroup;
+    private _turn: AnimationGroup;
     private _dance: AnimationGroup;
     public _isDancing: boolean;
 
@@ -73,6 +74,7 @@ export class Player extends TransformNode {
 
         this._idle = assets.animationGroups[4];
         this._run = assets.animationGroups[5];
+        this._turn = assets.animationGroups[0];
         this._jump = assets.animationGroups[1];
         this._dance = assets.animationGroups[2];
         this._land = assets.animationGroups[3];
@@ -104,6 +106,25 @@ export class Player extends TransformNode {
         this._h = this._input.horizontal; //x-axis
         this._v = this._input.vertical; //z-axis
 
+        //--DASHING--
+        //limit dash to once per ground/platform touch
+        if (this._input.dashing && !this._dashPressed && this._canDash) {
+            this._canDash = false; //we've started a dash, do not allow another
+            this._dashPressed = true; //start the dash sequence
+        }
+
+        let dashFactor = 1;
+        //if you're dashing, scale movement
+        if (this._dashPressed) {
+            if (this.dashTime > Player.DASH_TIME) {
+                this.dashTime = 0;
+                this._dashPressed = false;
+            } else {
+                dashFactor = Player.DASH_FACTOR;
+            }
+            this.dashTime++;
+        }
+
         //--MOVEMENTS BASED ON CAMERA (as it rotates)--
         let fwd = this._camRoot.forward;
         let right = this._camRoot.right;
@@ -112,6 +133,9 @@ export class Player extends TransformNode {
 
         //movement based off of camera's view
         let move = correctedHorizontal.addInPlace(correctedVertical);
+
+        //clear y so that the character doesnt fly up, normalize for next step, taking into account whether we've DASHED or not
+        this._moveDirection = new Vector3((move).normalize().x * dashFactor, 0, (move).normalize().z * dashFactor);
 
         //clamp the input value so that diagonal movement isn't twice as fast
         let inputMag = Math.abs(this._h) + Math.abs(this._v);
@@ -127,7 +151,7 @@ export class Player extends TransformNode {
         this._moveDirection = this._moveDirection.scaleInPlace(this._inputAmt * Player.PLAYER_SPEED);
 
         //Updating position to remote server
-        this.socket.emit("playerMoving", this.mesh.position._x, this.mesh.position._y, this.mesh.position._z, this.scene.getMeshByName("outer").rotationQuaternion);
+        this.socket.emit("playerMoving", this.mesh.position._x, this.mesh.position._y, this.mesh.position._z);
 
         //Rotations
         //check if there is movement to determine if rotation is needed
@@ -268,11 +292,11 @@ export class Player extends TransformNode {
         if (!this._isGrounded()) {
             //if the body isnt grounded, check if it's on a slope and was either falling or walking onto it
             if (this._checkSlope() && this._gravity.y <= 0) {
-                console.log("slope")
                 //if you are considered on a slope, you're able to jump and gravity wont affect you
                 this._gravity.y = 0;
                 this._jumpCount = 1;
                 this._grounded = true;
+                this._isFalling = false;
             } else {
                 //keep applying gravity
                 this._gravity = this._gravity.addInPlace(Vector3.Up().scale(this._deltaTime * Player.GRAVITY));

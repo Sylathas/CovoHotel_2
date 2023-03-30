@@ -2,7 +2,7 @@
 import "@babylonjs/inspector";
 import "@babylonjs/loaders/glTF";
 
-import { Engine, Scene, Vector3, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, HDRCubeTexture, Texture, PointerEventTypes, Ray, Animation, PickingInfo, AnimationGroup, TransformNode, Sound, SceneOptimizerOptions, HardwareScalingOptimization, SceneOptimizer, LensFlaresOptimization, TextureOptimization, DirectionalLight, ExecuteCodeAction, ActionManager } from "@babylonjs/core";
+import { Engine, Scene, Vector3, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, HDRCubeTexture, Texture, PointerEventTypes, Ray, Animation, PickingInfo, AnimationGroup, TransformNode, Sound, SceneOptimizerOptions, HardwareScalingOptimization, SceneOptimizer, LensFlaresOptimization, TextureOptimization, DirectionalLight } from "@babylonjs/core";
 import { AdvancedDynamicTexture, Button, Control, Container } from "@babylonjs/gui";
 
 import { Environment } from "./environment";
@@ -38,6 +38,7 @@ if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(naviga
     $('#hideTutorial').css('display', 'block');
     $('.dialogue').attr('id', 'dialogueMobile');
     $('.dialogueName').attr('id', 'dialogueNameMobile');
+    $('.settingsMenu').attr('id', 'settingsMenuMobile');
 }
 
 class App {
@@ -46,7 +47,6 @@ class App {
     private _scene: Scene;
     private _canvas: HTMLCanvasElement;
     private _engine: Engine;
-    private startingTime = 1680189300
 
     //Game State Related
     public assets;
@@ -69,7 +69,6 @@ class App {
     private _MapDream: string = 'DreamMap.gltf'; //mesh of the game map
     private _dreamEnvironmentTexture: string = "textures/sky.hdr"; //environment texture for HDRI and skybox
     private _goDream: boolean;
-    private _dreamLight: DirectionalLight;
 
     //Scene - related
     private _state: number = 0;
@@ -306,7 +305,11 @@ class App {
         });
 
         $("#settingsDesktop, #settingsMobile").on('click', () => {
+            $('.settingsMenu').css('display', 'flex');
+        });
 
+        $("#closeIcon").on('click', () => {
+            $('.settingsMenu').css('display', 'none');
         });
 
         $("#covoDesktop, #covoMobile").on('click', () => {
@@ -423,18 +426,23 @@ class App {
         this._scene.registerAfterRender(() => {
             //Enter dream when passing through the trigger 
             if (this._npc[5]) {
-                console.log(this._npc[5]);
                 if (this._npc[5].gotoDream === true) {
                     this._npc[5].gotoDream = false;
                     this._goDream = true;
                     this._gamescene = this._scene;
+
+                    //Change tutorial UI for dream
+                    $('#tutMobile').css('background-image', 'url("./textures/UI/TutorialDream_Desktop.png")');
+                    if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                        $('#tutMobile').css('background-image', 'url("./textures/UI/TutorialDream_Mobile.png")');
+                        $('#dreamTime').css('display', 'block');
+                    }
                     if (this._dreamPlayer) {
                         this._scene = this._dreamscene;
                         this._state = State.DREAM;
                         return
                     }
                     this._goToDream();
-                    console.log("Accessing Dream")
                 }
             }
         });
@@ -456,13 +464,10 @@ class App {
         });
 
         //Manage Other Users Movement
-        this.socket.on('playerMoved', (remoteSocketId, posX, posY, posZ, playerRotation) => {
+        this.socket.on('playerMoved', (remoteSocketId, posX, posY, posZ) => {
             if (this.users[remoteSocketId] == null) {
                 this.users[remoteSocketId] = new OtherPlayer(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(posX, posY, posZ), "player.glb");
-            } else { 
-                this.users[remoteSocketId].mesh.position = new Vector3(posX, posY, posZ);
-                this.users[remoteSocketId].mesh.rotationQuaternion = playerRotation; 
-            }
+            } else { this.users[remoteSocketId].mesh.position = new Vector3(posX, posY, posZ); }
         });
 
         //Delete disconnected player
@@ -503,15 +508,15 @@ class App {
         scene.ambientColor = new Color3(0, 0, 0);
         scene.clearColor = new Color4(0, 0, 0);
 
-        this._dreamLight = new DirectionalLight("sun", new Vector3(-0.5, -0.5, -0.5), scene);
-        this._dreamLight.position = new Vector3(50, 50, 50);
-        this._dreamLight.diffuse = new Color3(0.91, 0.83, 0.52);
-        this._dreamLight.intensity = 1;
+        const light = new DirectionalLight("sun", new Vector3(-0.5, -0.5, -0.5), scene);
+        light.position = new Vector3(50, 50, 50);
+        light.diffuse = new Color3(0.91, 0.83, 0.52);
+        light.intensity = 1;
 
         //Create a Node that is used to check for the convOpen
         new TransformNode('convOpen', scene);
 
-        this.dreamShadowGenerator = new ShadowGenerator(1024, this._dreamLight);
+        this.dreamShadowGenerator = new ShadowGenerator(1024, light);
         this.dreamShadowGenerator.darkness = 0.4;
         this.dreamShadowGenerator.useBlurExponentialShadowMap = true;
 
@@ -549,7 +554,7 @@ class App {
         });
 
         $("#settings").on('click', () => {
-
+            $('.settingsMenu').css('display', 'flex');
         });
 
         $("#covo").on('click', () => {
@@ -658,75 +663,19 @@ class App {
             //Get back to game when passing through the trigger 
             if (this._dreamPlayer.mesh) {
                 if (this._dreamPlayer.mesh.intersectsMesh(this._scene.getMeshByName("SHRINE_primitive1"))) {
+                    //Change tutorial UI for game
+                    $('#tutMobile').css('background-image', 'url("./textures/UI/Tutorial_Desktop.png")');
+                    if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                        $('#tutMobile').css('background-image', 'url("./textures/UI/Tutorial_Mobile.png")');
+                        $('#dreamTime').css('display', 'none');
+                    }
                     this._dreamscene.getMeshByName("outer").position = Vector3.Zero();
-                    this._gamescene.getMeshByName('outer').position.z = this._gamescene.getMeshByName('outer').position.z - 15;
                     this._scene = this._gamescene;
                     this._state = State.GAME;
                     this._goDream = false;
                 }
             }
         });
-
-        //Dream Sound Manager
-
-        var stemVolume = 0;
-        var fourPosition = 0;
-
-        const dreamSoundBase = new Sound("music", "/sounds/dream.mp3", scene, null,
-            {
-                autoplay: true,
-                loop: true,
-            });
-        const dreamSound4D = new Sound("music", "/sounds/dreamStem.mp3", scene, null,
-            {
-                autoplay: true,
-                loop: true,
-                volume: stemVolume
-            });
-
-        $("body").on("keydown", function(e){
-            if(e.originalEvent.key == 'e'){
-                if (fourPosition < 70) {
-                    stemVolume = stemVolume + 0.0148;
-                    fourPosition = fourPosition + 1;
-                    game._dreamLight.diffuse.r += 0.01
-                    game._dreamLight.diffuse.g -= 0.02
-                    game._dreamLight.diffuse.b -= 0.05
-                } else if (fourPosition >= 70 && fourPosition < 100){
-                    stemVolume = stemVolume - 0.0333;
-                    game._dreamLight.diffuse.r += 0.01
-                    game._dreamLight.diffuse.g -= 0.02
-                    game._dreamLight.diffuse.b -= 0.05
-                    fourPosition = fourPosition + 1;
-                };
-                dreamSound4D.setVolume(stemVolume)
-                console.log("Stem Volume is: " + stemVolume + "Four Position is:" + fourPosition);
-            }
-            if(e.originalEvent.key == 'q'){
-                if (fourPosition < 70 && fourPosition > 0) {
-                    stemVolume = stemVolume - 0.0148;
-                    fourPosition = fourPosition - 1;
-                    game._dreamLight.diffuse.r -= 0.01
-                    game._dreamLight.diffuse.g += 0.02
-                    game._dreamLight.diffuse.b += 0.05
-                } else if (fourPosition >= 70){
-                    stemVolume = stemVolume + 0.0333;
-                    fourPosition = fourPosition - 1;
-                    game._dreamLight.diffuse.r -= 0.01
-                    game._dreamLight.diffuse.g += 0.02
-                    game._dreamLight.diffuse.b += 0.05
-                }
-                dreamSound4D.setVolume(stemVolume)   
-                console.log("Stem Volume is: " + stemVolume + "Four Position is:" + fourPosition);
-            }  
-        });
-        
-
-        /*if (inputMap["q"] || inputMap["Q"]) {
-            
-        } else if (inputMap["e"] || inputMap["E"]) {
-            
-        }*/
     }
 
     private async _loadCharacterAssets(scene, playerModel) {
