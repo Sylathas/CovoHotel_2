@@ -2,7 +2,7 @@
 import "@babylonjs/inspector";
 import "@babylonjs/loaders/glTF";
 
-import { Engine, Scene, Vector3, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, HDRCubeTexture, Texture, PointerEventTypes, Ray, Animation, PickingInfo, AnimationGroup, TransformNode, Sound, SceneOptimizerOptions, HardwareScalingOptimization, SceneOptimizer, LensFlaresOptimization, TextureOptimization, DirectionalLight } from "@babylonjs/core";
+import { Engine, Scene, Vector3, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, HDRCubeTexture, Texture, PointerEventTypes, Ray, Animation, PickingInfo, AnimationGroup, TransformNode, Sound, SceneOptimizerOptions, HardwareScalingOptimization, SceneOptimizer, LensFlaresOptimization, TextureOptimization, DirectionalLight, ExecuteCodeAction, ActionManager } from "@babylonjs/core";
 import { AdvancedDynamicTexture, Button, Control, Container } from "@babylonjs/gui";
 
 import { Environment } from "./environment";
@@ -424,6 +424,7 @@ class App {
                         return
                     }
                     this._goToDream();
+                    console.log("Accessing Dream")
                 }
             }
         });
@@ -622,7 +623,7 @@ class App {
 
         this._scene.registerBeforeRender(() => {
             //Optimize automatically scene based on the framerate
-            /*if (this._engine.getFps() < 15 && this._optimizationLevel < 3) {
+            if (this._engine.getFps() < 15 && this._optimizationLevel < 3) {
                 this._optimizeScene(scene, SceneOptimizerOptions.HighDegradationAllowed(60), 5);
                 this._optimizationLevel = 3;
             } else if (this._engine.getFps() < 30 && this._optimizationLevel < 2) {
@@ -634,7 +635,7 @@ class App {
             } else if (this._engine.getFps() > 120 && this.isOptimized) {
                 this._optimizer.stop();
                 this._optimizer.reset();
-            }*/
+            }
         });
 
         this._scene.registerAfterRender(() => {
@@ -642,7 +643,7 @@ class App {
             this._checkFrontCamera();
 
             //Get back to game when passing through the trigger 
-            /*if (this._dreamPlayer.mesh) {
+            if (this._dreamPlayer.mesh) {
                 if (this._dreamPlayer.mesh.intersectsMesh(this._scene.getMeshByName("SHRINE"))) {
                     this._dreamscene.getMeshByName("outer").position = Vector3.Zero();
                     this._gamescene.getMeshByName('outer').position.z = this._gamescene.getMeshByName('outer').position.z - 15;
@@ -650,8 +651,46 @@ class App {
                     this._state = State.GAME;
                     this._goDream = false;
                 }
-            }*/
+            }
         });
+
+        //Dream Sound Manager
+
+        var stemVolume = 0;
+
+        const dreamSoundBase = new Sound("music", "/sounds/dream.mp3", scene, null,
+            {
+                autoplay: true,
+                loop: true,
+            });
+        const dreamSound4D = new Sound("music", "/sounds/kobra.mp3", scene, null,
+            {
+                autoplay: true,
+                loop: true,
+                volume: stemVolume
+            });
+
+        const inputMap = {};
+        scene.actionManager.registerAction(new ExecuteCodeAction(ActionManager.OnKeyDownTrigger, (evt) => {
+            inputMap[evt.sourceEvent.key] = evt.sourceEvent.type == "keydown";
+        }));
+        scene.actionManager.registerAction(new ExecuteCodeAction(ActionManager.OnKeyUpTrigger, (evt) => {
+           inputMap[evt.sourceEvent.key] = evt.sourceEvent.type == "keydown";
+        }));
+
+        if (inputMap["q"] || inputMap["Q"]) {
+            if (stemVolume < 70 && stemVolume >= 0) {
+                stemVolume = stemVolume - 0.148;
+            } else if (stemVolume > 70){
+                stemVolume = stemVolume + 0.333;
+            }
+        } else if (inputMap["e"] || inputMap["E"]) {
+            if (stemVolume < 70) {
+                stemVolume = stemVolume + 0.148;
+            } else if (stemVolume > 70 && stemVolume < 100){
+                stemVolume = stemVolume - 0.333;
+            };
+        }
     }
 
     private async _loadCharacterAssets(scene, playerModel) {
