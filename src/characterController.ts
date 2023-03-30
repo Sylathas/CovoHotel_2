@@ -146,7 +146,7 @@ export class Player extends TransformNode {
         this._moveDirection = this._moveDirection.scaleInPlace(this._inputAmt * Player.PLAYER_SPEED);
 
         //Updating position to remote server
-        this.socket.emit("playerMoving", this.mesh.position._x, this.mesh.position._y, this.mesh.position._z);
+        this.socket.emit("playerMoving", this.mesh.position._x, this.mesh.position._y, this.mesh.position._z, this.scene.getMeshByName("outer").rotationQuaternion);
 
         //Rotations
         //check if there is movement to determine if rotation is needed
