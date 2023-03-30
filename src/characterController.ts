@@ -73,11 +73,6 @@ export class Player extends TransformNode {
         this._idle = assets.animationGroups[1];
         this._run = assets.animationGroups[0];
 
-        shadowGenerator.forEach(element => {
-            element.addShadowCaster(assets.mesh);
-            //the player mesh will cast shadows
-        });
-
         this._setUpAnimations(); //Call the function to set up the animations
 
         this._input = input;
@@ -184,14 +179,14 @@ export class Player extends TransformNode {
     }
 
     private _animatePlayer(): void {
-        if (!this._dashPressed && !this._isFalling && !this._jumped 
+        if (!this._dashPressed && !this._isFalling && !this._jumped
             && (this._input.vertical != 0
-            || this._input.horizontal != 0)) {
+                || this._input.horizontal != 0)) {
             this._currentAnim = this._run;
         } else if (this._jumped && !this._isFalling && !this._dashPressed) {
             //this._currentAnim = this._jump;
         } else if (!this._isFalling && this._grounded) {
-            if(this._isDancing){
+            if (this._isDancing) {
                 this._currentAnim = this._dance;
             } else {
                 this._currentAnim = this._idle;
@@ -201,11 +196,11 @@ export class Player extends TransformNode {
                 this.onRun.notifyObservers(false);
             }
         */} else if (this._isFalling) {
-           // this._currentAnim = this._land;
+            // this._currentAnim = this._land;
         }
 
         //Animations
-        if(this._currentAnim != null && this._prevAnim !== this._currentAnim){
+        if (this._currentAnim != null && this._prevAnim !== this._currentAnim) {
             this._prevAnim.stop();
             this._currentAnim.play(this._currentAnim.loopAnimation);
             this._prevAnim = this._currentAnim;
@@ -369,13 +364,13 @@ export class Player extends TransformNode {
 
     private _updateCamera(): void {
         let centerPlayer = this.mesh.position.y + 2;
-        if(this.scene.getTransformNodeById('convOpen')) {
-            if(this.scene.getTransformNodeById('convOpen').isEnabled()){
+        if (this.scene.getTransformNodeById('convOpen')) {
+            if (this.scene.getTransformNodeById('convOpen').isEnabled()) {
                 this._camRoot.position = Vector3.Lerp(this._camRoot.position, new Vector3(this.mesh.position.x, centerPlayer, this.mesh.position.z), 0.4);
             }
         }
 
-        if(this.camera.radius < 1) {
+        if (this.camera.radius < 1) {
             this.mesh.setEnabled(false);
         } else {
             this.mesh.setEnabled(true);
@@ -417,7 +412,7 @@ export class Player extends TransformNode {
         this.camera.onCollide = function (collidedMesh) {
             //console.log(collidedMesh);
         }
-        
+
         this.camera.inputs.remove(this.camera.inputs.attached.keyboard); //Remove keyboard controls 
         this.camera.parent = yTilt; //Parent to yTilt
 

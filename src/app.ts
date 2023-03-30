@@ -2,7 +2,7 @@
 import "@babylonjs/inspector";
 import "@babylonjs/loaders/glTF";
 
-import { Engine, Scene, Vector3, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, HDRCubeTexture, Texture, PointerEventTypes, Ray, Animation, PickingInfo, AnimationGroup, TransformNode, Sound, SceneOptimizerOptions, HardwareScalingOptimization, SceneOptimizer, LensFlaresOptimization, TextureOptimization, DirectionalLight} from "@babylonjs/core";
+import { Engine, Scene, Vector3, Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3, PointLight, ShadowGenerator, Quaternion, Matrix, SceneLoader, GlowLayer, HDRCubeTexture, Texture, PointerEventTypes, Ray, Animation, PickingInfo, AnimationGroup, TransformNode, Sound, SceneOptimizerOptions, HardwareScalingOptimization, SceneOptimizer, LensFlaresOptimization, TextureOptimization, DirectionalLight } from "@babylonjs/core";
 import { AdvancedDynamicTexture, Button, Control, Container } from "@babylonjs/gui";
 
 import { Environment } from "./environment";
@@ -18,9 +18,9 @@ enum State { START = 0, GAME = 1, LOADING = 2, DREAM = 3 }
 
 //Dictionary Types
 type NPCAssets = {
-   mesh: Mesh;
-   animationGroups: AnimationGroup;
-   name: string;
+    mesh: Mesh;
+    animationGroups: AnimationGroup;
+    name: string;
 }
 
 //Change UI on mobile
@@ -46,10 +46,10 @@ class App {
     private _scene: Scene;
     private _canvas: HTMLCanvasElement;
     private _engine: Engine;
-    
+
     //Game State Related
     public assets;
-    public otherAssets : { [name: string]: NPCAssets } = {};
+    public otherAssets: { [name: string]: NPCAssets } = {};
     private _input: PlayerInput;
     private _environment;
     private _player: Player;
@@ -85,7 +85,7 @@ class App {
     private _hits: PickingInfo[] = [];
     private _fadeAnimation: Animation;
 
-     //Multiplayer
+    //Multiplayer
     private socket = theFramework.socket;
     private users = {};
     private playersIndex = 3;
@@ -118,7 +118,7 @@ class App {
         this._fadeAnimation = new Animation("fade", "visibility", 30, Animation.ANIMATIONTYPE_FLOAT);
 
         //Create keyframes
-        const keyFrames = []; 
+        const keyFrames = [];
         keyFrames.push({
             frame: 0,
             value: 1
@@ -131,7 +131,7 @@ class App {
 
         this._fadeAnimation.setKeys(keyFrames);
 
-        
+
 
         // run the main render loop 
         this._main();
@@ -202,7 +202,7 @@ class App {
         const game = this;
 
         $('#enterMobile, #enterDesktop').on('click', () => {
-            if(finishedLoading){
+            if (finishedLoading) {
                 game._goToGame();
             }
         });
@@ -243,7 +243,7 @@ class App {
         const game = this;
 
         await scene.getNodes().forEach(element => {
-            if(element.name.includes('light')) {
+            if (element.name.includes('light')) {
                 element.id = 'light';
             }
         });
@@ -253,7 +253,7 @@ class App {
             light.diffuse = new Color3(0.08627450980392157, 0.10980392156862745, 0.15294117647058825);
             light.intensity = 50;
             light.radius = 20;
-            const shadow =  new ShadowGenerator(1024, light);
+            const shadow = new ShadowGenerator(1024, light);
             shadow.darkness = 0.4;
             game.shadowGenerator.push(shadow);
         });
@@ -266,10 +266,10 @@ class App {
         const camera = this._player.activatePlayerCamera();
 
         //Create NPCs
-        this._npc.push(new NPC(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(10,2,10), 'npc1', camera, this._canvas));
-        this._npc.push(new NPC(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(10,2,20), 'npc2', camera, this._canvas));
+        this._npc.push(new NPC(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(10, 2, 10), 'npc1', camera, this._canvas));
+        this._npc.push(new NPC(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(10, 2, 20), 'npc2', camera, this._canvas));
 
-        this._interactObject.push(new InteractObject(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(10,2,20), 'npc2'));
+        this._interactObject.push(new InteractObject(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(10, 2, 20), 'npc2'));
 
         //glow layer
         const gl = new GlowLayer("glow", scene);
@@ -284,11 +284,11 @@ class App {
         scene.clearColor = new Color4(0.01568627450980392, 0.01568627450980392, 0.20392156862745098); // a color that fit the overall color scheme better
 
         const game = this;
-        
+
         //Add interactions for buttons
-        $("#danceDesktop, #danceMobile").on( 'click', () => {
+        $("#danceDesktop, #danceMobile").on('click', () => {
             console.log('dance');
-            if(game._player._isDancing){
+            if (game._player._isDancing) {
                 game._player._isDancing = false;
                 $('#danceDesktop, #danceMobile').css('background-image', 'url("./textures/UI/Bot1.png")');
             } else {
@@ -308,13 +308,13 @@ class App {
         //Hide and show button on mobile
         let tutHid = true;
         $("#hideTutorial, #tutMobile").on('click', () => {
-            if(tutHid) {
+            if (tutHid) {
                 $('#tutMobile').css('transform', 'translate(-50%, 0)');
-                $('#hideTutorial').css({'top': '20%', 'background-image': 'url("./textures/UI/hideUI.png")'});
+                $('#hideTutorial').css({ 'top': '20%', 'background-image': 'url("./textures/UI/hideUI.png")' });
                 tutHid = false;
             } else {
                 $('#tutMobile').css('transform', 'translate(-50%, -100%)');
-                $('#hideTutorial').css({'top': '0', 'background-image': 'url("./textures/UI/showUI.png")'});
+                $('#hideTutorial').css({ 'top': '0', 'background-image': 'url("./textures/UI/showUI.png")' });
                 tutHid = true;
             }
         });
@@ -353,10 +353,10 @@ class App {
 
         //Add fade animation to all the meshes in the scene
         this._scene.meshes.forEach(mesh => {
-            if(mesh.getClassName() != "InstancedMesh"){
+            if (mesh.getClassName() != "InstancedMesh") {
                 mesh.animations.push(this._fadeAnimation);
                 this._npc.forEach(npc => {
-                    if(mesh.name === npc.name){
+                    if (mesh.name === npc.name) {
                         mesh.animations.pop();
                     }
                 });
@@ -395,40 +395,30 @@ class App {
         this._scene.registerBeforeRender(() => {
             // Make meshes between player and camera turn transparent
             this._checkFrontCamera();
-            const game = this;
-
-            this._scene.getTransformNodesById('light').forEach(element => {
-                if(Vector3.Distance(game._player.position, element.position) > 20) {
-                    console.log('wow');
-                    element.setEnabled(true);
-                } else {
-                    element.setEnabled(false);
-                }
-            });
 
             //Optimize automatically scene based on the framerate
-            if(this._engine.getFps() < 15 && this._optimizationLevel < 3) {
+            if (this._engine.getFps() < 15 && this._optimizationLevel < 3) {
                 this._optimizeScene(scene, SceneOptimizerOptions.HighDegradationAllowed(60), 5);
                 this._optimizationLevel = 3;
-            } else if(this._engine.getFps() < 30 && this._optimizationLevel < 2) {
+            } else if (this._engine.getFps() < 30 && this._optimizationLevel < 2) {
                 this._optimizeScene(scene, SceneOptimizerOptions.ModerateDegradationAllowed(60), 3);
                 this._optimizationLevel = 2;
-            } else if(this._engine.getFps() < 60 && this._optimizationLevel < 1) {
+            } else if (this._engine.getFps() < 60 && this._optimizationLevel < 1) {
                 this._optimizeScene(scene, SceneOptimizerOptions.LowDegradationAllowed(60), 2);
                 this._optimizationLevel = 1;
-            } else if(this._engine.getFps() > 120 && this.isOptimized){
+            } else if (this._engine.getFps() > 120 && this.isOptimized) {
                 this._optimizer.stop();
                 this._optimizer.reset();
             }
         });
 
-        /*this._scene.registerAfterRender(() => {
+        this._scene.registerAfterRender(() => {
             //Enter dream when passing through the trigger 
-            if(this._player.mesh) {
-                if (this._player.mesh.intersectsMesh(this._scene.getMeshByName("dream")) && !this._goDream ) {
+            if (this._player.mesh) {
+                if (this._player.mesh.intersectsMesh(this._scene.getMeshByName("dream")) && !this._goDream) {
                     this._goDream = true;
                     this._gamescene = this._scene;
-                    if(this._dreamPlayer) {
+                    if (this._dreamPlayer) {
                         this._scene = this._dreamscene;
                         this._state = State.DREAM;
                         return
@@ -436,7 +426,7 @@ class App {
                     this._goToDream();
                 }
             }
-        });*/
+        });
 
         //Multiplayer
 
@@ -453,12 +443,12 @@ class App {
             this.users[remoteSocketId] = new OtherPlayer(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(this._scene.getMeshByName('outer').position.x, this._scene.getMeshByName('outer').position.y + 0.5, this._scene.getMeshByName('outer').position.z), "player.glb");
             console.log(this.users);
         });
-        
+
         //Manage Other Users Movement
         this.socket.on('playerMoved', (remoteSocketId, posX, posY, posZ) => {
             if (this.users[remoteSocketId] == null) {
                 this.users[remoteSocketId] = new OtherPlayer(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(posX, posY, posZ), "player.glb");
-            } else { this.users[remoteSocketId].mesh.position = new Vector3(posX, posY, posZ);}
+            } else { this.users[remoteSocketId].mesh.position = new Vector3(posX, posY, posZ); }
         });
 
         //Delete disconnected player
@@ -470,11 +460,11 @@ class App {
 
         //Manage Sounds
         const music = new Sound("music", "/sounds/kobra.mp3", scene, null,
-          {
-            autoplay: true, 
-            loop: true,
-            spatialSound: true,
-          });
+            {
+                autoplay: true,
+                loop: true,
+                spatialSound: true,
+            });
 
         //--START LOADING AND SETTING UP THE DREAM DURING THIS SCENE--
         var finishedLoading = false;
@@ -533,9 +523,9 @@ class App {
         const game = this;
 
         //Add interactions for buttons
-        $("#dance").on( 'click', () => {
+        $("#dance").on('click', () => {
             console.log('dance');
-            if(game._player._isDancing){
+            if (game._player._isDancing) {
                 game._player._isDancing = false;
                 $('#dance').css('background-image', 'url("./textures/UI/Bot1.png")');
             } else {
@@ -555,7 +545,7 @@ class App {
         //dont detect any inputs from this ui while the game is loading
         scene.detachControl();
 
-        
+
         //IBL (image based lighting) - to give scene an ambient light
         const envHdri = new HDRCubeTexture(this._dreamEnvironmentTexture, scene, 512);
         envHdri.name = "env";
@@ -566,14 +556,14 @@ class App {
         */
 
         // Skybox
-	    var skybox = MeshBuilder.CreateSphere("skyBox", {diameter:1000.0}, scene);
-	    var skyboxMaterial = new StandardMaterial("skyBox", scene);
-	    skyboxMaterial.backFaceCulling = false;
-	    skyboxMaterial.reflectionTexture = envHdri;
-	    skyboxMaterial.reflectionTexture.coordinatesMode = Texture.SKYBOX_MODE;
-	    skyboxMaterial.diffuseColor = new Color3(0, 0, 0);
-	    skyboxMaterial.specularColor = new Color3(0, 0, 0);
-	    skybox.material = skyboxMaterial;	
+        var skybox = MeshBuilder.CreateSphere("skyBox", { diameter: 1000.0 }, scene);
+        var skyboxMaterial = new StandardMaterial("skyBox", scene);
+        skyboxMaterial.backFaceCulling = false;
+        skyboxMaterial.reflectionTexture = envHdri;
+        skyboxMaterial.reflectionTexture.coordinatesMode = Texture.SKYBOX_MODE;
+        skyboxMaterial.diffuseColor = new Color3(0, 0, 0);
+        skyboxMaterial.specularColor = new Color3(0, 0, 0);
+        skybox.material = skyboxMaterial;
 
         scene.autoClear = false; // Color buffer
         scene.autoClearDepthAndStencil = false; // Depth and stencil, obviously
@@ -581,11 +571,14 @@ class App {
         //--INPUT--
         this._dreamInput = new PlayerInput(scene, this._canvas); //detect keyboard/mobile inputs
 
+
         //primitive character and setting
         await this._initializeDreamAsync(scene);
 
+
         //--WHEN SCENE FINISHED LOADING--
         await scene.whenReadyAsync();
+
         scene.getMeshByName("outer").position = scene.getTransformNodeByName("startPosition").getAbsolutePosition(); //move the player to the start position
         //get rid of start scene, switch to gamescene and change states
         this._scene = scene;
@@ -605,40 +598,51 @@ class App {
             switch (pointerInfo.type) {
                 case PointerEventTypes.POINTERDOWN:
                     this._mouseDown = true;
+                    //If it's on a touch device, it needs to be updated everytime it touches, not when it moves
+                    if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                        lastMousePos = this._scene.pointerX;
+                    }
                     break;
                 case PointerEventTypes.POINTERUP:
                     this._mouseDown = false;
                     break;
                 case PointerEventTypes.POINTERMOVE:
-                    if (this._mouseDown) {
+                    if (this._mouseDown && this._scene.getTransformNodeById('convOpen').isEnabled()) {
                         this._scene.cameras[0]._cache.parent.rotation.y += (this._scene.pointerX - lastMousePos) / 100;
+                        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                            lastMousePos = this._scene.pointerX;
+                        }
                     }
-                    lastMousePos = this._scene.pointerX;
+                    if (!/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                        lastMousePos = this._scene.pointerX;
+                    }
                     break;
             }
         });
 
         this._scene.registerBeforeRender(() => {
             //Optimize automatically scene based on the framerate
-            if(this._engine.getFps() < 15 && this._optimizationLevel < 3) {
+            /*if (this._engine.getFps() < 15 && this._optimizationLevel < 3) {
                 this._optimizeScene(scene, SceneOptimizerOptions.HighDegradationAllowed(60), 5);
                 this._optimizationLevel = 3;
-            } else if(this._engine.getFps() < 30 && this._optimizationLevel < 2) {
+            } else if (this._engine.getFps() < 30 && this._optimizationLevel < 2) {
                 this._optimizeScene(scene, SceneOptimizerOptions.ModerateDegradationAllowed(60), 3);
                 this._optimizationLevel = 2;
-            } else if(this._engine.getFps() < 60 && this._optimizationLevel < 1) {
+            } else if (this._engine.getFps() < 60 && this._optimizationLevel < 1) {
                 this._optimizeScene(scene, SceneOptimizerOptions.LowDegradationAllowed(60), 2);
                 this._optimizationLevel = 1;
-            } else if(this._engine.getFps() > 120 && this.isOptimized){
+            } else if (this._engine.getFps() > 120 && this.isOptimized) {
                 this._optimizer.stop();
                 this._optimizer.reset();
-            }
+            }*/
         });
 
         this._scene.registerAfterRender(() => {
+            // Make meshes between player and camera turn transparent
+            this._checkFrontCamera();
 
             //Get back to game when passing through the trigger 
-            if(this._dreamPlayer.mesh) {
+            /*if (this._dreamPlayer.mesh) {
                 if (this._dreamPlayer.mesh.intersectsMesh(this._scene.getMeshByName("SHRINE"))) {
                     this._dreamscene.getMeshByName("outer").position = Vector3.Zero();
                     this._gamescene.getMeshByName('outer').position.z = this._gamescene.getMeshByName('outer').position.z - 15;
@@ -646,7 +650,7 @@ class App {
                     this._state = State.GAME;
                     this._goDream = false;
                 }
-            }
+            }*/
         });
     }
 
@@ -722,7 +726,7 @@ class App {
 
         otherModels.forEach((model) => {
             return loadOtherModels(model).then(assets => {
-                otherModels[assets.name] = { mesh: assets.mesh, animationGroups: assets.animationGroups, name: assets.name}
+                otherModels[assets.name] = { mesh: assets.mesh, animationGroups: assets.animationGroups, name: assets.name }
             });
         });
     }
@@ -730,45 +734,44 @@ class App {
     private _optimizeScene(scene, degradation, hardwareOptimization) {
         let game = this;
         SceneOptimizer.OptimizeAsync(scene, degradation,
-            function() {
-            var options = new SceneOptimizerOptions(60, 500);
-            options.addOptimization(new HardwareScalingOptimization(0, hardwareOptimization));
-            options.addOptimization(new TextureOptimization(0, 1));
-  
-            // Optimizer
-            if(game.isOptimized) {
-                game._optimizer.stop();
-                game._optimizer.reset();
-            }
-            game._optimizer = new SceneOptimizer(scene, options);
-            game._optimizer.start();
-            game.isOptimized = true;
-        });
+            function () {
+                var options = new SceneOptimizerOptions(60, 500);
+                options.addOptimization(new HardwareScalingOptimization(0, hardwareOptimization));
+                options.addOptimization(new TextureOptimization(0, 1));
+
+                // Optimizer
+                if (game.isOptimized) {
+                    game._optimizer.stop();
+                    game._optimizer.reset();
+                }
+                game._optimizer = new SceneOptimizer(scene, options);
+                game._optimizer.start();
+                game.isOptimized = true;
+            });
     }
 
     //Check if something is between the camera and the player
     private _checkFrontCamera() {
-
         //Create Raycast from camera to player
         let ray = Ray.CreateNewFromTo(
             this._scene.cameras[0].globalPosition,
             new Vector3(this._scene.getMeshByName('outer').position.x, this._scene.getMeshByName('outer').position.y + 0.5, this._scene.getMeshByName('outer').position.z)
         );
-        
+
         //Check what meshes are hit by the ray
         const hits = this._scene.multiPickWithRay(ray);
-        
+
         //If ray hits, start animation of disappearing
-        if (hits){
-            for (var i=0; i < hits.length; i++){
+        if (hits) {
+            for (var i = 0; i < hits.length; i++) {
                 this._scene.beginAnimation(hits[i].pickedMesh, 30, 0);
             }
-         }
+        }
 
-         //Make meshes hit before now appear
-         this._hits.forEach(mesh => {
+        //Make meshes hit before now appear
+        this._hits.forEach(mesh => {
             hits.forEach(element => {
-                if(mesh.pickedMesh.name == element.pickedMesh.name){
+                if (mesh.pickedMesh.name == element.pickedMesh.name) {
                     return
                 }
                 this._scene.beginAnimation(mesh, 0, 30);
