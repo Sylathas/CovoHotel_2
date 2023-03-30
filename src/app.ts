@@ -47,6 +47,7 @@ class App {
     private _scene: Scene;
     private _canvas: HTMLCanvasElement;
     private _engine: Engine;
+    private startingTime = 1680189300
 
     //Game State Related
     public assets;
