@@ -47,6 +47,7 @@ class App {
     private _scene: Scene;
     private _canvas: HTMLCanvasElement;
     private _engine: Engine;
+    private startingTime = 1680189300
 
     //Game State Related
     public assets;
@@ -478,8 +479,11 @@ class App {
         //Manage Other Users Movement
         this.socket.on('playerMoved', (remoteSocketId, posX, posY, posZ, playerRotation) => {
             if (this.users[remoteSocketId] == null) {
-                this.users[remoteSocketId] = new OtherPlayer(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(posX, posY, posZ), "player.glb");
-            } else { this.users[remoteSocketId].mesh.position = new Vector3(posX, posY, posZ); }
+                this.users[remoteSocketId] = new OtherPlayer(this.otherAssets['Player.gltf'], scene, this.shadowGenerator, new Vector3(posX, posY, posZ), "Player.gltf");
+            }  else { 
+                this.users[remoteSocketId].mesh.position = new Vector3(posX, posY, posZ);
+                this.users[remoteSocketId].mesh.rotationQuaternion = playerRotation; 
+            }
         });
 
         //Delete disconnected player
