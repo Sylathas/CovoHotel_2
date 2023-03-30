@@ -468,10 +468,13 @@ class App {
         });
 
         //Manage Other Users Movement
-        this.socket.on('playerMoved', (remoteSocketId, posX, posY, posZ) => {
+        this.socket.on('playerMoved', (remoteSocketId, posX, posY, posZ, playerRotation) => {
             if (this.users[remoteSocketId] == null) {
                 this.users[remoteSocketId] = new OtherPlayer(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(posX, posY, posZ), "player.glb");
-            } else { this.users[remoteSocketId].mesh.position = new Vector3(posX, posY, posZ); }
+            } else { 
+                this.users[remoteSocketId].mesh.position = new Vector3(posX, posY, posZ);
+                this.users[remoteSocketId].mesh.rotationQuaternion = playerRotation; 
+            }
         });
 
         //Delete disconnected player
