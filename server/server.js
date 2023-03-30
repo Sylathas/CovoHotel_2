@@ -12,7 +12,7 @@ const app = express(),
 app.use(express.static(DIST_DIR));
 const http = require('http');
 const server = http.createServer(app);
-//const startingTime = process.argv;
+const startingTime = process.argv[2];
 const PORT = 8080;
 
 // Socket.io
@@ -27,10 +27,7 @@ app.get('*', (req, res) => {
 
 // Server starts listen @ PORT
 server.listen(PORT, () => {
-  process.argv.forEach((val, index) => {
-    console.log(`${index}: ${val}`);
-  });
-  console.log('App listening to ' + PORT + " with starting time set to " /*+ Date(startingTime * 1000) + " with UnixTime: " + startingTime*/);
+  console.log('App listening to ' + PORT + " with starting time set to " + Date(startingTime * 1000) + " with UnixTime: " + startingTime);
   console.log('Press Ctrl+C to quit.')
 })
 
