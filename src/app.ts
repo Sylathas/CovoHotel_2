@@ -61,6 +61,7 @@ class App {
     private _otherModels: string[] = ["Player.gltf", "Barman.gltf", "Bouncer.gltf", "Businessman.gltf", "Crazy.gltf", "Dj.gltf", "Dream.gltf", "Deadman.gltf", "Drunkard.gltf", "Owner.gltf", "Plug.gltf", "Raver.gltf", "Snobby.gltf"]; //mesh of npcs and interactive objects
     public _convOpen: boolean = false;
     private _goGame: boolean = false;
+    private _music: Sound;
 
     //Dream State Related
     private _dreamInput: PlayerInput;
@@ -69,6 +70,9 @@ class App {
     private _MapDream: string = 'DreamMap.gltf'; //mesh of the game map
     private _dreamEnvironmentTexture: string = "textures/sky.hdr"; //environment texture for HDRI and skybox
     private _goDream: boolean;
+    private _dreamMainMusic: Sound;
+    private _dreamStem: Sound;
+    private _dreamLight: DirectionalLight;
 
     //Scene - related
     private _state: number = 0;
@@ -472,9 +476,9 @@ class App {
         });
 
         //Manage Other Users Movement
-        this.socket.on('playerMoved', (remoteSocketId, posX, posY, posZ) => {
+        this.socket.on('playerMoved', (remoteSocketId, posX, posY, posZ, playerRotation) => {
             if (this.users[remoteSocketId] == null) {
-                this.users[remoteSocketId] = new OtherPlayer(this.otherAssets['Player.gltf'], scene, this.shadowGenerator, new Vector3(posX, posY, posZ), "Player.gltf");
+                this.users[remoteSocketId] = new OtherPlayer(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(posX, posY, posZ), "player.glb");
             } else { this.users[remoteSocketId].mesh.position = new Vector3(posX, posY, posZ); }
         });
 
@@ -486,7 +490,7 @@ class App {
         });
 
         //Manage Sounds
-        const music = new Sound("music", "/sounds/kobra.mp3", scene, null,
+        this._music = new Sound("music", "/sounds/kobra.mp3", scene, null,
             {
                 autoplay: true,
                 loop: true,
@@ -516,15 +520,15 @@ class App {
         scene.ambientColor = new Color3(0, 0, 0);
         scene.clearColor = new Color4(0, 0, 0);
 
-        const light = new DirectionalLight("sun", new Vector3(-0.5, -0.5, -0.5), scene);
-        light.position = new Vector3(50, 50, 50);
-        light.diffuse = new Color3(0.91, 0.83, 0.52);
-        light.intensity = 1;
+        this._dreamLight = new DirectionalLight("sun", new Vector3(-0.5, -0.5, -0.5), scene);
+        this._dreamLight.position = new Vector3(50, 50, 50);
+        this._dreamLight.diffuse = new Color3(0.91, 0.83, 0.52);
+        this._dreamLight.intensity = 1;
 
         //Create a Node that is used to check for the convOpen
         new TransformNode('convOpen', scene);
 
-        this.dreamShadowGenerator = new ShadowGenerator(1024, light);
+        this.dreamShadowGenerator = new ShadowGenerator(1024, this._dreamLight);
         this.dreamShadowGenerator.darkness = 0.4;
         this.dreamShadowGenerator.useBlurExponentialShadowMap = true;
 
@@ -548,6 +552,9 @@ class App {
         scene.clearColor = new Color4(0.01568627450980392, 0.01568627450980392, 0.20392156862745098); // a color that fit the overall color scheme better
 
         const game = this;
+
+        //Remove old music
+        game._music.setVolume(0);
 
         //Add interactions for buttons
         $("#dance").on('click', () => {
@@ -581,6 +588,60 @@ class App {
         scene.environmentTexture = envHdri;
         scene.environmentIntensity = 0.1;
         */
+
+        //Dream Sound Manager
+
+        var stemVolume = 0;
+        var fourPosition = 0;
+
+        this._dreamMainMusic = new Sound("music", "/sounds/dream.mp3", scene, null,
+            {
+                autoplay: true,
+                loop: true,
+            });
+        this._dreamStem = new Sound("music", "/sounds/dreamStem.mp3", scene, null,
+            {
+                autoplay: true,
+                loop: true,
+                volume: stemVolume
+            });
+
+        $("body").on("keydown", function (e) {
+            if (e.originalEvent.key == 'e') {
+                if (fourPosition < 70) {
+                    stemVolume = stemVolume + 0.0148;
+                    fourPosition = fourPosition + 1;
+                    game._dreamLight.diffuse.r += 0.01
+                    game._dreamLight.diffuse.g -= 0.02
+                    game._dreamLight.diffuse.b -= 0.05
+                } else if (fourPosition >= 70 && fourPosition < 100) {
+                    stemVolume = stemVolume - 0.0333;
+                    game._dreamLight.diffuse.r += 0.01
+                    game._dreamLight.diffuse.g -= 0.02
+                    game._dreamLight.diffuse.b -= 0.05
+                    fourPosition = fourPosition + 1;
+                };
+                game._dreamStem.setVolume(stemVolume)
+                console.log("Stem Volume is: " + stemVolume + "Four Position is:" + fourPosition);
+            }
+            if (e.originalEvent.key == 'q') {
+                if (fourPosition < 70 && fourPosition > 0) {
+                    stemVolume = stemVolume - 0.0148;
+                    fourPosition = fourPosition - 1;
+                    game._dreamLight.diffuse.r -= 0.01
+                    game._dreamLight.diffuse.g += 0.02
+                    game._dreamLight.diffuse.b += 0.05
+                } else if (fourPosition >= 70) {
+                    stemVolume = stemVolume + 0.0333;
+                    fourPosition = fourPosition - 1;
+                    game._dreamLight.diffuse.r -= 0.01
+                    game._dreamLight.diffuse.g += 0.02
+                    game._dreamLight.diffuse.b += 0.05
+                }
+                game._dreamStem.setVolume(stemVolume)
+                console.log("Stem Volume is: " + stemVolume + "Four Position is:" + fourPosition);
+            }
+        });
 
         // Skybox
         var skybox = MeshBuilder.CreateSphere("skyBox", { diameter: 1000.0 }, scene);
@@ -677,6 +738,10 @@ class App {
                         $('#tutMobile').css('background-image', 'url("./textures/UI/Tutorial_Mobile.png")');
                         $('#dreamTime').css('display', 'none');
                     }
+                    //Music Back On
+                    this._music.setVolume(1)
+                    this._dreamMainMusic.setVolume(0);
+                    this._dreamStem.setVolume(0);
                     this._dreamscene.getMeshByName("outer").position = Vector3.Zero();
                     this._scene = this._gamescene;
                     this._state = State.GAME;
