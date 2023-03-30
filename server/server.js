@@ -49,11 +49,12 @@ io.on("connection", (socket) => {
     });
 
     //Player Movement
-    socket.on('playerMoving', (posX, posY, posZ) => {
+    socket.on('playerMoving', (posX, posY, posZ, rotation) => {
       connectedPlayers[socket.id].posX = posX;
       connectedPlayers[socket.id].posY = posY;
       connectedPlayers[socket.id].posZ = posZ;
-      socket.broadcast.emit('playerMoved', socket.id, posX, posY, posZ);
+      connectedPlayers[socket.id].rotation = rotation;
+      socket.broadcast.emit('playerMoved', socket.id, posX, posY, posZ, rotation);
     });
 
 });
@@ -65,7 +66,7 @@ class Player {
     this.skin = skin;
     this.posX = posX;
     this.posY = posY;
-    this.facing = facing;
+    this.rotation = this.rotation;
   }
 }
 

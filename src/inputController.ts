@@ -99,13 +99,13 @@ export class PlayerInput {
         } else if (this.inputMap["ArrowRight"] || this.inputMap["d"] || this.inputMap["D"]) {
             this.horizontalAxis = 1;
             this._rotateCamera(scene);
-        } else if (this.inputMap["q"] || this.inputMap["Q"]) {
+        }/* else if (this.inputMap["q"] || this.inputMap["Q"]) {
             this.horizontal = Scalar.Lerp(this.horizontal, -1, 0.2);
             this._rotateCamera(scene);
         } else if (this.inputMap["e"] || this.inputMap["E"]) {
             this.horizontal = Scalar.Lerp(this.horizontal, 1, 0.2);
             this._rotateCamera(scene);
-        } else {
+        }*/ else {
             this.horizontal = 0;
             this.horizontalAxis = 0;
         }
