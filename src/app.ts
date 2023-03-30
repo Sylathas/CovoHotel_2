@@ -645,7 +645,7 @@ class App {
 
             //Get back to game when passing through the trigger 
             if (this._dreamPlayer.mesh) {
-                if (this._dreamPlayer.mesh.intersectsMesh(this._scene.getMeshByName("SHRINE"))) {
+                if (this._dreamPlayer.mesh.intersectsMesh(this._scene.getMeshByName("SHRINE_primitive1"))) {
                     this._dreamscene.getMeshByName("outer").position = Vector3.Zero();
                     this._gamescene.getMeshByName('outer').position.z = this._gamescene.getMeshByName('outer').position.z - 15;
                     this._scene = this._gamescene;
@@ -664,7 +664,7 @@ class App {
                 autoplay: true,
                 loop: true,
             });
-        const dreamSound4D = new Sound("music", "/sounds/kobra.mp3", scene, null,
+        const dreamSound4D = new Sound("music", "/sounds/dreamStem.mp3", scene, null,
             {
                 autoplay: true,
                 loop: true,
@@ -685,12 +685,14 @@ class App {
             } else if (stemVolume > 70){
                 stemVolume = stemVolume + 0.333;
             }
+            console.log("Stem Volume is: " + stemVolume);
         } else if (inputMap["e"] || inputMap["E"]) {
             if (stemVolume < 70) {
                 stemVolume = stemVolume + 0.148;
             } else if (stemVolume > 70 && stemVolume < 100){
                 stemVolume = stemVolume - 0.333;
             };
+            console.log("Stem Volume is: " + stemVolume);
         }
     }
 
