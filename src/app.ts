@@ -417,6 +417,7 @@ class App {
             if (this._player.mesh) {
                 if (this._player.mesh.intersectsMesh(this._scene.getMeshByName("dream")) && !this._goDream) {
                     this._goDream = true;
+                    console.log('yo');
                     this._gamescene = this._scene;
                     if (this._dreamPlayer) {
                         this._scene = this._dreamscene;
@@ -622,7 +623,7 @@ class App {
 
         this._scene.registerBeforeRender(() => {
             //Optimize automatically scene based on the framerate
-            /*if (this._engine.getFps() < 15 && this._optimizationLevel < 3) {
+            if (this._engine.getFps() < 15 && this._optimizationLevel < 3) {
                 this._optimizeScene(scene, SceneOptimizerOptions.HighDegradationAllowed(60), 5);
                 this._optimizationLevel = 3;
             } else if (this._engine.getFps() < 30 && this._optimizationLevel < 2) {
@@ -634,7 +635,7 @@ class App {
             } else if (this._engine.getFps() > 120 && this.isOptimized) {
                 this._optimizer.stop();
                 this._optimizer.reset();
-            }*/
+            }
         });
 
         this._scene.registerAfterRender(() => {
@@ -642,15 +643,15 @@ class App {
             this._checkFrontCamera();
 
             //Get back to game when passing through the trigger 
-            /*if (this._dreamPlayer.mesh) {
-                if (this._dreamPlayer.mesh.intersectsMesh(this._scene.getMeshByName("SHRINE"))) {
+            if (this._dreamPlayer.mesh) {
+                if (this._dreamPlayer.mesh.intersectsMesh(this._scene.getMeshByName("SHRINE_primitive1"))) {
                     this._dreamscene.getMeshByName("outer").position = Vector3.Zero();
                     this._gamescene.getMeshByName('outer').position.z = this._gamescene.getMeshByName('outer').position.z - 15;
                     this._scene = this._gamescene;
                     this._state = State.GAME;
                     this._goDream = false;
                 }
-            }*/
+            }
         });
     }
 
