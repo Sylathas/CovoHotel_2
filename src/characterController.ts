@@ -23,7 +23,6 @@ export class Player extends TransformNode {
     private _idle: AnimationGroup;
     private _jump: AnimationGroup;
     private _land: AnimationGroup;
-    private _dash: AnimationGroup;
     private _dance: AnimationGroup;
     public _isDancing: boolean;
 
@@ -70,13 +69,17 @@ export class Player extends TransformNode {
         this.mesh = assets.mesh;
         this.mesh.parent = this;
 
-        this._idle = assets.animationGroups[1];
-        this._run = assets.animationGroups[0];
+        console.log(assets.animationGroups);
+
+        this._idle = assets.animationGroups[4];
+        this._run = assets.animationGroups[5];
+        this._jump = assets.animationGroups[1];
+        this._dance = assets.animationGroups[2];
+        this._land = assets.animationGroups[3];
 
         this._setUpAnimations(); //Call the function to set up the animations
 
         this._input = input;
-        console.log(this._input);
 
         //--COLLISIONS--
         this.mesh.actionManager = new ActionManager(this.scene);
@@ -101,25 +104,6 @@ export class Player extends TransformNode {
         this._h = this._input.horizontal; //x-axis
         this._v = this._input.vertical; //z-axis
 
-        //--DASHING--
-        //limit dash to once per ground/platform touch
-        if (this._input.dashing && !this._dashPressed && this._canDash) {
-            this._canDash = false; //we've started a dash, do not allow another
-            this._dashPressed = true; //start the dash sequence
-        }
-
-        let dashFactor = 1;
-        //if you're dashing, scale movement
-        if (this._dashPressed) {
-            if (this.dashTime > Player.DASH_TIME) {
-                this.dashTime = 0;
-                this._dashPressed = false;
-            } else {
-                dashFactor = Player.DASH_FACTOR;
-            }
-            this.dashTime++;
-        }
-
         //--MOVEMENTS BASED ON CAMERA (as it rotates)--
         let fwd = this._camRoot.forward;
         let right = this._camRoot.right;
@@ -128,9 +112,6 @@ export class Player extends TransformNode {
 
         //movement based off of camera's view
         let move = correctedHorizontal.addInPlace(correctedVertical);
-
-        //clear y so that the character doesnt fly up, normalize for next step, taking into account whether we've DASHED or not
-        this._moveDirection = new Vector3((move).normalize().x * dashFactor, 0, (move).normalize().z * dashFactor);
 
         //clamp the input value so that diagonal movement isn't twice as fast
         let inputMag = Math.abs(this._h) + Math.abs(this._v);
@@ -168,10 +149,10 @@ export class Player extends TransformNode {
 
     private _setUpAnimations(): void {
 
-        this.scene.stopAllAnimations();
         this._run.loopAnimation = true;
         this._idle.loopAnimation = true;
-        //this._dance.loopAnimation = true;
+        this._dance.loopAnimation = true;
+        this._land.loopAnimation = true;
 
         //initialize current and previous
         this._currentAnim = this._idle;
@@ -184,19 +165,15 @@ export class Player extends TransformNode {
                 || this._input.horizontal != 0)) {
             this._currentAnim = this._run;
         } else if (this._jumped && !this._isFalling && !this._dashPressed) {
-            //this._currentAnim = this._jump;
+            this._currentAnim = this._jump;
         } else if (!this._isFalling && this._grounded) {
             if (this._isDancing) {
                 this._currentAnim = this._dance;
             } else {
                 this._currentAnim = this._idle;
             }
-            //only notify observer if it's playing
-            /*if(this.scene.getSoundByName("walking").isPlaying){
-                this.onRun.notifyObservers(false);
-            }
-        */} else if (this._isFalling) {
-            // this._currentAnim = this._land;
+        } else if (this._isFalling) {
+            this._currentAnim = this._land;
         }
 
         //Animations

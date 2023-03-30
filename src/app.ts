@@ -19,7 +19,7 @@ enum State { START = 0, GAME = 1, LOADING = 2, DREAM = 3 }
 //Dictionary Types
 type NPCAssets = {
     mesh: Mesh;
-    animationGroups: AnimationGroup;
+    animationGroups: AnimationGroup[];
     name: string;
 }
 
@@ -54,11 +54,10 @@ class App {
     private _environment;
     private _player: Player;
     private _npc: NPC[] = [];
-    private _interactObject: InteractObject[] = [];
     private _MapGame: string = 'Layout.gltf'; //mesh of the game map
     private _environmentTexture: string = "textures/env.hdr"; //environment texture for HDRI and skybox
-    private _playerModel: string = "player_animated.glb"; //mesh of the player
-    private _otherModels: string[] = ["player_animated.glb"]; //mesh of npcs and interactive objects
+    private _playerModel: string = "Player.gltf"; //mesh of the player
+    private _otherModels: string[] = ["Barman.gltf", "Bouncer.gltf", "Businessman.gltf", "Crazy.gltf", "Dj.gltf", "Dream.gltf", "Deadman.gltf", "Drunkard.gltf", "Owner.gltf", "Plug.gltf", "Raver.gltf", "Snobby.gltf"]; //mesh of npcs and interactive objects
     public _convOpen: boolean = false;
     private _goGame: boolean = false;
 
@@ -66,7 +65,7 @@ class App {
     private _dreamInput: PlayerInput;
     private _dreamEnvironment;
     private _dreamPlayer: Player;
-    private _MapDream: string = 'Dream.gltf'; //mesh of the game map
+    private _MapDream: string = 'DreamMap.gltf'; //mesh of the game map
     private _dreamEnvironmentTexture: string = "textures/sky.hdr"; //environment texture for HDRI and skybox
     private _goDream: boolean;
 
@@ -266,10 +265,17 @@ class App {
         const camera = this._player.activatePlayerCamera();
 
         //Create NPCs
-        this._npc.push(new NPC(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(10, 2, 10), 'npc1', camera, this._canvas));
-        this._npc.push(new NPC(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(10, 2, 20), 'npc2', camera, this._canvas));
-
-        this._interactObject.push(new InteractObject(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(10, 2, 20), 'npc2'));
+        this._npc.push(new NPC(this.otherAssets['Barman.gltf'], scene, this.shadowGenerator, scene.getTransformNodeByName("Barman").getAbsolutePosition(), 'Barman', camera, this._canvas));
+        this._npc.push(new NPC(this.otherAssets['Bouncer.gltf'], scene, this.shadowGenerator, scene.getTransformNodeByName("Bouncer").getAbsolutePosition(), 'Bouncer', camera, this._canvas));
+        this._npc.push(new NPC(this.otherAssets['Businessman.gltf'], scene, this.shadowGenerator, scene.getTransformNodeByName("Businessman").getAbsolutePosition(), 'Businessman', camera, this._canvas));
+        this._npc.push(new NPC(this.otherAssets['Crazy.gltf'], scene, this.shadowGenerator, scene.getTransformNodeByName("Crazy").getAbsolutePosition(), 'Crazy', camera, this._canvas));
+        this._npc.push(new NPC(this.otherAssets['Deadman.gltf'], scene, this.shadowGenerator, scene.getTransformNodeByName("Deadman").getAbsolutePosition(), 'Deadman', camera, this._canvas));
+        this._npc.push(new NPC(this.otherAssets['Dream.gltf'], scene, this.shadowGenerator, scene.getTransformNodeByName("Dream").getAbsolutePosition(), 'Dream', camera, this._canvas));
+        this._npc.push(new NPC(this.otherAssets['Drunkard.gltf'], scene, this.shadowGenerator, scene.getTransformNodeByName("Drunkard").getAbsolutePosition(), 'Drunkard', camera, this._canvas));
+        this._npc.push(new NPC(this.otherAssets['Plug.gltf'], scene, this.shadowGenerator, scene.getTransformNodeByName("Plug").getAbsolutePosition(), 'Plug', camera, this._canvas));
+        this._npc.push(new NPC(this.otherAssets['Raver.gltf'], scene, this.shadowGenerator, scene.getTransformNodeByName("Raver").getAbsolutePosition(), 'Raver', camera, this._canvas));
+        this._npc.push(new NPC(this.otherAssets['Snobby.gltf'], scene, this.shadowGenerator, scene.getTransformNodeByName("Snobby").getAbsolutePosition(), 'Snobby', camera, this._canvas));
+        this._npc.push(new NPC(this.otherAssets['Owner.gltf'], scene, this.shadowGenerator, scene.getTransformNodeByName("Owner").getAbsolutePosition(), 'Owner', camera, this._canvas));
 
         //glow layer
         const gl = new GlowLayer("glow", scene);
@@ -356,7 +362,7 @@ class App {
             if (mesh.getClassName() != "InstancedMesh") {
                 mesh.animations.push(this._fadeAnimation);
                 this._npc.forEach(npc => {
-                    if (mesh.name === npc.name) {
+                    if (mesh.name.slice(0, -5) === npc.name) {
                         mesh.animations.pop();
                     }
                 });
@@ -414,10 +420,11 @@ class App {
 
         this._scene.registerAfterRender(() => {
             //Enter dream when passing through the trigger 
-            if (this._player.mesh) {
-                if (this._player.mesh.intersectsMesh(this._scene.getMeshByName("dream")) && !this._goDream) {
+            if (this._npc[5]) {
+                console.log(this._npc[5]);
+                if (this._npc[5].gotoDream === true) {
+                    this._npc[5].gotoDream = false;
                     this._goDream = true;
-                    console.log('yo');
                     this._gamescene = this._scene;
                     if (this._dreamPlayer) {
                         this._scene = this._dreamscene;
@@ -726,8 +733,9 @@ class App {
         }
 
         otherModels.forEach((model) => {
+            const game = this;
             return loadOtherModels(model).then(assets => {
-                otherModels[assets.name] = { mesh: assets.mesh, animationGroups: assets.animationGroups, name: assets.name }
+                game.otherAssets[assets.name] = { mesh: assets.mesh, animationGroups: assets.animationGroups, name: assets.name }
             });
         });
     }
