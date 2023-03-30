@@ -23,7 +23,6 @@ export class Player extends TransformNode {
     private _idle: AnimationGroup;
     private _jump: AnimationGroup;
     private _land: AnimationGroup;
-    private _turn: AnimationGroup;
     private _dance: AnimationGroup;
     public _isDancing: boolean;
 
@@ -74,7 +73,6 @@ export class Player extends TransformNode {
 
         this._idle = assets.animationGroups[4];
         this._run = assets.animationGroups[5];
-        this._turn = assets.animationGroups[0];
         this._jump = assets.animationGroups[1];
         this._dance = assets.animationGroups[2];
         this._land = assets.animationGroups[3];

@@ -58,7 +58,7 @@ class App {
     private _MapGame: string = 'Layout.gltf'; //mesh of the game map
     private _environmentTexture: string = "textures/env.hdr"; //environment texture for HDRI and skybox
     private _playerModel: string = "Player.gltf"; //mesh of the player
-    private _otherModels: string[] = ["Barman.gltf", "Bouncer.gltf", "Businessman.gltf", "Crazy.gltf", "Dj.gltf", "Dream.gltf", "Deadman.gltf", "Drunkard.gltf", "Owner.gltf", "Plug.gltf", "Raver.gltf", "Snobby.gltf"]; //mesh of npcs and interactive objects
+    private _otherModels: string[] = ["Player.gltf", "Barman.gltf", "Bouncer.gltf", "Businessman.gltf", "Crazy.gltf", "Dj.gltf", "Dream.gltf", "Deadman.gltf", "Drunkard.gltf", "Owner.gltf", "Plug.gltf", "Raver.gltf", "Snobby.gltf"]; //mesh of npcs and interactive objects
     public _convOpen: boolean = false;
     private _goGame: boolean = false;
 
@@ -277,6 +277,7 @@ class App {
         this._npc.push(new NPC(this.otherAssets['Raver.gltf'], scene, this.shadowGenerator, scene.getTransformNodeByName("Raver").getAbsolutePosition(), 'Raver', camera, this._canvas));
         this._npc.push(new NPC(this.otherAssets['Snobby.gltf'], scene, this.shadowGenerator, scene.getTransformNodeByName("Snobby").getAbsolutePosition(), 'Snobby', camera, this._canvas));
         this._npc.push(new NPC(this.otherAssets['Owner.gltf'], scene, this.shadowGenerator, scene.getTransformNodeByName("Owner").getAbsolutePosition(), 'Owner', camera, this._canvas));
+        new OtherPlayer(this.otherAssets['Player.gltf'], scene, this.shadowGenerator, new Vector3(0, 0, 0), "Player.gltf")
 
         //glow layer
         const gl = new GlowLayer("glow", scene);
@@ -445,6 +446,13 @@ class App {
                     this._goToDream();
                 }
             }
+
+            //Add trigger on walking to the vip lounge without the golden pass
+            if (this._player.mesh) {
+                if (this._player.mesh.intersectsMesh(this._scene.getMeshByName('trigger')) && !this._npc[7].goldPass) {
+                    this._player.position = this._scene.getTransformNodeByName('kickedOut').absolutePosition;
+                }
+            }
         });
 
         //Multiplayer
@@ -459,14 +467,14 @@ class App {
         this.socket.on('newPlayer', (remoteSocketId) => {
             console.log("A new player joined with id: " + remoteSocketId);
             this.playersIndex = this.playersIndex + 1;
-            this.users[remoteSocketId] = new OtherPlayer(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(this._scene.getMeshByName('outer').position.x, this._scene.getMeshByName('outer').position.y + 0.5, this._scene.getMeshByName('outer').position.z), "player.glb");
+            this.users[remoteSocketId] = new OtherPlayer(this.otherAssets['Player.gltf'], scene, this.shadowGenerator, new Vector3(this._scene.getMeshByName('outer').position.x, this._scene.getMeshByName('outer').position.y + 0.5, this._scene.getMeshByName('outer').position.z), "Player.gltf");
             console.log(this.users);
         });
 
         //Manage Other Users Movement
         this.socket.on('playerMoved', (remoteSocketId, posX, posY, posZ) => {
             if (this.users[remoteSocketId] == null) {
-                this.users[remoteSocketId] = new OtherPlayer(this._otherModels['player_animated.glb'], scene, this.shadowGenerator, new Vector3(posX, posY, posZ), "player.glb");
+                this.users[remoteSocketId] = new OtherPlayer(this.otherAssets['Player.gltf'], scene, this.shadowGenerator, new Vector3(posX, posY, posZ), "Player.gltf");
             } else { this.users[remoteSocketId].mesh.position = new Vector3(posX, posY, posZ); }
         });
 

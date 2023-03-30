@@ -20,7 +20,7 @@ export class NPC extends TransformNode {
     private dialogueCounterLocal: number = 0; //index of text of current conversation
     private _dialogueOn: boolean = false;
     private dialogues = convsMale;
-    private goldPass: boolean = false;
+    public goldPass: boolean = false;
     private covoPin: boolean = false;
     private businessCard: boolean = false;
     public gotoDream: boolean = false;

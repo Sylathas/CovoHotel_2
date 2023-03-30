@@ -7,18 +7,23 @@ import { convsMale } from "./dialogues";
 export class OtherPlayer extends TransformNode {
     private scene: Scene;
 
-    //Animation
+    //animations
+    private _run: AnimationGroup;
     private _idle: AnimationGroup;
+    private _jump: AnimationGroup;
+    private _land: AnimationGroup;
+    private _dance: AnimationGroup;
+    public _isDancing: boolean;
 
     //Player 
     private mesh: AbstractMesh; //outer collisionbox of Player
 
-    constructor(assets ,scene: Scene, shadowGenerator: ShadowGenerator[], position: Vector3, name: string) {
+    constructor(assets, scene: Scene, shadowGenerator: ShadowGenerator[], position: Vector3, name: string) {
         super(name, scene);
         this.scene = scene;
 
         //Initialize the Player 
-        const copyMesh = this.scene.getMeshByName(assets.name);
+        const copyMesh = this.scene.getMeshByName(name);
         this.mesh = copyMesh.clone(name, this);
         this.mesh.position = position;
         this.mesh.isEnabled(false);
@@ -32,7 +37,7 @@ export class OtherPlayer extends TransformNode {
         shadowGenerator.forEach(element => {
             element.addShadowCaster(this.mesh); //the player mesh will cast shadows
         });
-        
+
 
         this.scene.registerBeforeRender(() => {
             this._animatePlayer();

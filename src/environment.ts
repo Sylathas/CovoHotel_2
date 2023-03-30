@@ -41,7 +41,7 @@ export class Environment {
                 m.checkCollisions = true;
             }
             //trigger meshes 
-            if (m.name.includes("Dream")) {
+            if (m.name.includes("trigger")) {
                 m.isVisible = false;
                 m.isPickable = false;
                 m.checkCollisions = false;
